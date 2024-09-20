@@ -1,0 +1,7 @@
+dataset
+interview
+**/build
+.*
+!.gitignore
+*.txt
+!CMakeLists.txt
