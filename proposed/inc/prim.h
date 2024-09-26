@@ -4,7 +4,8 @@
 #include <limits>
 #include <vector>
 #include <cstring>
-template <class T>
-void Prim(std::vector<std::vector<T>> &adjancency_matrix);
 
-#endif
+template <class T>
+std::vector<std::vector<T>> Prim(std::vector<std::vector<T>> &adjancency_matrix);
+
+#endif // MINIMUM_SPANNING_TREE_H

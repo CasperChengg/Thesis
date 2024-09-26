@@ -332,3 +332,69 @@ void Proposed(Dataset *dataset, size_t k)
     dataset->training_set = preprocessed_data;
     GetDatasetInfo(dataset, true);
 }
+
+template<class T>
+float CalculateDiversity(std::vector<std::vector<T>> &dataset, size_t n_classes)
+{
+    // seperate n-class dataset into n single-class dataset
+    std::vector<std::vector<T>> class_dataset[n_classes];
+    for(unsigned int data_idx = 0, data_label_idx = dataset[0].size(); data_idx < dataset.size(); data_idx++)
+    {
+        unsigned int data_label = dataset[data_idx][data_label_idx];
+        class_dataset[data_label].push_back(dataset[data_idx]);
+    }
+
+    // get representative data points by KMeansPP within each single class dataset
+    std::vector<std::vector<T>> representative_points;
+    std::vector<unsigned int> representative_points_label;
+    for(unsigned int class_idx = 0; class_idx < n_classes; class_idx++)
+    {   
+        size_t n_clusters = log10(class_dataset[class_idx].size());
+        std::vector<std::vector<T>> centroids = KMeansPP(class_dataset[class_idx], n_clusters, 100, 1e-4);
+        representative_points.insert(representative_points.end(), centroids.begin(), centroids.end());
+
+        size_t n_valid_centroids = centroids.size();
+        representative_points_label.insert(representative_points_label.end(), n_valid_centroids, class_idx);
+    }
+
+    size_t n_representative_points = representative_points.size();
+    std::vector<std::vector<float>> adjacency_matrix(n_representative_points, std::vector<float>(n_representative_points, 0));
+
+    for(unsigned int rep_point_idx = 0; rep_point_idx < n_representative_points; rep_point_idx++)
+    {
+        for(unsigned int rep_point_idx_ = 0; rep_point_idx_ < n_representative_points; rep_point_idx_++)
+        {
+            adjacency_matrix[rep_point_idx][rep_point_idx_] = EuclideanDistance(representative_points[rep_point_idx], representative_points[rep_point_idx_]);
+        }
+    }
+
+    // after Prim, adjacency matrix store only the MST
+    Prim<float>(adjacency_matrix);
+
+    std::vector<size_t> n_neighbors_in_class(n_classes, 0);
+    std::vector<size_t> n_diff_class_neighbors_in_class(n_classes, 0);
+    for(unsigned int rep_point_idx = 0; rep_point_idx < n_representative_points; rep_point_idx++)
+    {
+        unsigned int rep_point_label = representative_points_label[rep_point_idx];
+        for(unsigned int rep_point_idx_ = 0; rep_point_idx_ < n_representative_points; rep_point_idx_++)
+        {
+            if(adjacency_matrix[rep_point_idx][rep_point_idx_] > 0)
+            {
+                unsigned int rep_point_label_ = representative_points_label[rep_point_idx_];
+                n_neighbors_in_class[rep_point_label]++;
+                if(rep_point_label != rep_point_label_)
+                {
+                    n_diff_class_neighbors_in_class[rep_point_label]++;
+                }
+            }
+        }
+    }
+
+    float diversity = 0;
+    for(unsigned int class_idx = 0; class_idx < n_classes; class_idx++)
+    {
+        diversity += (float)n_diff_class_neighbors_in_class[class_idx] / n_neighbors_in_class[class_idx];
+    }
+    
+    return diversity;
+}

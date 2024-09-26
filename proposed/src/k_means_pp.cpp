@@ -1,5 +1,4 @@
-#include <k_means_pp.h>
-
+#include "../inc/k_means_pp.h"
 static float EuclideanDistance(std::vector<float> &src, std::vector<float> &dst)
 {
     float square_distance = 0;
@@ -201,3 +200,7 @@ std::vector<std::vector<T>> KMeansPP(std::vector<std::vector<T>> &dataset, size_
 
     return centroids;
 }
+
+template std::vector<std::vector<float>> KMeansPP(std::vector<std::vector<float>> &dataset, size_t n_clusters,  size_t max_iter, float tolerance);
+
+
