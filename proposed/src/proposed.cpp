@@ -336,65 +336,89 @@ void Proposed(Dataset *dataset, size_t k)
 template<class T>
 float CalculateDiversity(std::vector<std::vector<T>> &dataset, size_t n_classes)
 {
-    // seperate n-class dataset into n single-class dataset
-    std::vector<std::vector<T>> class_dataset[n_classes];
-    for(unsigned int data_idx = 0, data_label_idx = dataset[0].size(); data_idx < dataset.size(); data_idx++)
+    // Separate n-class dataset into n single-class datasets
+    std::vector<std::vector<T>> class_dataset[n_classes + 1];
+    for(unsigned int data_idx = 0, data_label_idx = dataset[0].size() - 1; data_idx < dataset.size(); data_idx++)
     {
         unsigned int data_label = dataset[data_idx][data_label_idx];
         class_dataset[data_label].push_back(dataset[data_idx]);
     }
 
-    // get representative data points by KMeansPP within each single class dataset
+    // Get representative data points by KMeansPP within each single-class dataset
     std::vector<std::vector<T>> representative_points;
     std::vector<unsigned int> representative_points_label;
-    for(unsigned int class_idx = 0; class_idx < n_classes; class_idx++)
+    for(unsigned int class_idx = 1; class_idx <= n_classes; class_idx++)
     {   
-        size_t n_clusters = log10(class_dataset[class_idx].size());
-        std::vector<std::vector<T>> centroids = KMeansPP(class_dataset[class_idx], n_clusters, 100, 1e-4);
+        // Temporarily decided, waiting for experimentation
+        size_t n_clusters = 0.1 * class_dataset[class_idx].size();
+        n_clusters = (n_clusters == 0)? 1:n_clusters;
+        
+        // KMeansPP may produce centroids without any points; these centroids will be removed before returning
+        std::vector<std::vector<T>> centroids = KMeansPP<T>(class_dataset[class_idx], n_clusters, 100, 1e-4);
         representative_points.insert(representative_points.end(), centroids.begin(), centroids.end());
 
+        // centroids.size() <= n_clusters
         size_t n_valid_centroids = centroids.size();
         representative_points_label.insert(representative_points_label.end(), n_valid_centroids, class_idx);
     }
 
+    // Turn representative points into a complete graph, where the weight is the distance between the source vertex and the destination vertex
     size_t n_representative_points = representative_points.size();
-    std::vector<std::vector<float>> adjacency_matrix(n_representative_points, std::vector<float>(n_representative_points, 0));
-
-    for(unsigned int rep_point_idx = 0; rep_point_idx < n_representative_points; rep_point_idx++)
+    std::vector<std::vector<float>> complete_graph_adjacency_matrix(n_representative_points, std::vector<float>(n_representative_points, 0));
+    for(unsigned int src_vertex_idx = 0; src_vertex_idx < n_representative_points; src_vertex_idx++)
     {
-        for(unsigned int rep_point_idx_ = 0; rep_point_idx_ < n_representative_points; rep_point_idx_++)
+        for(unsigned int dst_vertex_idx = 0; dst_vertex_idx < n_representative_points; dst_vertex_idx++)
         {
-            adjacency_matrix[rep_point_idx][rep_point_idx_] = EuclideanDistance(representative_points[rep_point_idx], representative_points[rep_point_idx_]);
+            complete_graph_adjacency_matrix[src_vertex_idx][dst_vertex_idx] = EuclideanDistance(representative_points[src_vertex_idx], representative_points[dst_vertex_idx]);
         }
     }
 
-    // after Prim, adjacency matrix store only the MST
-    Prim<float>(adjacency_matrix);
+    // Get the MST of the complete graph formed by the representative points
+    std::vector<std::vector<float>>mst_adjacency_matrix = Prim<float>(complete_graph_adjacency_matrix);
+    complete_graph_adjacency_matrix.clear();
 
-    std::vector<size_t> n_neighbors_in_class(n_classes, 0);
-    std::vector<size_t> n_diff_class_neighbors_in_class(n_classes, 0);
-    for(unsigned int rep_point_idx = 0; rep_point_idx < n_representative_points; rep_point_idx++)
+    // Calculate the ratio of neighboring vertices from different classes to the total number of neighboring vertices in the MST for each class
+    std::vector<size_t> n_neighbors_per_class(n_classes + 1, 0);
+    std::vector<size_t> n_diff_class_neighbors_per_class(n_classes + 1, 0);
+#ifdef DEBUG
+        std::cout << "Minimum Spanning Tree:" << std::endl;
+#endif // DEBUG 
+    for(unsigned int src_vertex_idx = 0; src_vertex_idx < n_representative_points; src_vertex_idx++)
     {
-        unsigned int rep_point_label = representative_points_label[rep_point_idx];
-        for(unsigned int rep_point_idx_ = 0; rep_point_idx_ < n_representative_points; rep_point_idx_++)
+        unsigned int src_vertex_label = representative_points_label[src_vertex_idx];
+        for(unsigned int dst_vertex_idx = 0; dst_vertex_idx < n_representative_points; dst_vertex_idx++)
         {
-            if(adjacency_matrix[rep_point_idx][rep_point_idx_] > 0)
+#ifdef DEBUG
+            std::cout << mst_adjacency_matrix[src_vertex_idx][dst_vertex_idx] << " ";
+#endif // DEBUG 
+            if(mst_adjacency_matrix[src_vertex_idx][dst_vertex_idx] > 0)
             {
-                unsigned int rep_point_label_ = representative_points_label[rep_point_idx_];
-                n_neighbors_in_class[rep_point_label]++;
-                if(rep_point_label != rep_point_label_)
+                unsigned int dst_vertex_label = representative_points_label[dst_vertex_idx];
+                n_neighbors_per_class[src_vertex_label]++;
+                if(src_vertex_label != dst_vertex_label)
                 {
-                    n_diff_class_neighbors_in_class[rep_point_label]++;
+                    n_diff_class_neighbors_per_class[src_vertex_label]++;
                 }
             }
         }
+#ifdef DEBUG
+        std::cout << std::endl;
+#endif // DEBUG 
     }
 
     float diversity = 0;
-    for(unsigned int class_idx = 0; class_idx < n_classes; class_idx++)
+#ifdef DEBUG
+    std::cout << std::endl << "#different class neighbor, #neighbor" << std::endl;
+#endif // DEBUG 
+    for(unsigned int class_idx = 1; class_idx <= n_classes; class_idx++)
     {
-        diversity += (float)n_diff_class_neighbors_in_class[class_idx] / n_neighbors_in_class[class_idx];
+#ifdef DEBUG
+        std::cout << class_idx << ", [" << n_diff_class_neighbors_per_class[class_idx]  << ", " << n_neighbors_per_class[class_idx] << "]" << std::endl;
+#endif
+        diversity += (float)n_diff_class_neighbors_per_class[class_idx] / n_neighbors_per_class[class_idx];
     }
-    
+#ifdef DEBUG
+    std::cout << "diversity: " << diversity << std::endl;
+#endif
     return diversity;
 }
