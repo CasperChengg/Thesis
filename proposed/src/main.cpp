@@ -1,7 +1,7 @@
 #include <ctime>
 #include "validation.h"
 #include "file_operations.h"
-#include "proposed.h"
+#include "../inc/proposed.h"
 
 int main(int argc, char *argv[])
 {
@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
             std::string dataset_path = file_path + std::to_string(k);
             Dataset dataset = ReadDataset(dataset_path);
             clock_gettime(CLOCK_MONOTONIC, &start_ns);
-            Proposed(&dataset, KNN);
+            Proposed<float>(dataset.training_set, dataset.num_classes, KNN);
             Accuracies accuracies = Validation(&dataset, "decision_tree", ETA, PI);
             clock_gettime(CLOCK_MONOTONIC, &end_ns);
 

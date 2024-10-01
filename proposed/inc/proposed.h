@@ -2,6 +2,7 @@
 #define PROPOSED_H
 
 #include <cmath>
+#include <bitset>
 #include <utility>
 #include <iostream>
 #include <algorithm>
@@ -9,6 +10,14 @@
 #include "prim.h"
 #include "file_operations.h"
 
-void Proposed(Dataset *dataset, size_t k);
+typedef struct fitness
+{
+    uint32_t minority_rnn_counts;
+    float distance_to_minority_rnn;
+    float fitness;
+}fitness;
+
+template <typename T>
+void Proposed(std::vector<std::vector<T>>dataset, uint32_t n_classes, uint32_t k);
 
 #endif

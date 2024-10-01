@@ -1,22 +1,22 @@
 #!/bin/bash
 declare -a file_array=(
     "wine"
-    "hayes-roth"
-    "contraceptive" 
-    "penbased"
-    "new-thyroid"
-    "dermatology"
-    "balance"
-    "glass"
-    "yeast"
-    "ecoli"
-    "pageblocks"
-    "shuttle"
+    # "hayes-roth"
+    # "contraceptive" 
+    # "penbased"
+    # "new-thyroid"
+    # "dermatology"
+    # "balance"
+    # "glass"
+    # "yeast"
+    # "ecoli"
+    # "pageblocks"
+    # "shuttle"
 )
 
 KNN=5
-K_FOLD=5
-TEST_TIME=20
+K_FOLD=1
+TEST_TIME=1
 
 ETA=10
 PI=0.95
@@ -54,7 +54,8 @@ echo -e "CONSIDER_MIN=$CONSIDER_MIN\nKNN_DISTANCE=$KNN_DISTANCE\nDIVIDE_BY_DISTA
 for i in "${file_array[@]}"
 do
     echo "========== $i ===========" >> "../experiment.txt"
-    nohup ./main "$i" >> "../experiment.txt" 2> /dev/null &
+    # nohup ./main "$i" >> "../experiment.txt" 2> /dev/null &
+    ./main "$i"
     wait $!
 done
 echo "Finish: $(date +"%Y-%m-%d %H:%M:%S")" >> "../experiment.txt"
