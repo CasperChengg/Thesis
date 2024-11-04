@@ -1,244 +1,50 @@
-#include "decision_tree_classifier.h"
+#include "../inc/decision_tree_classifier.h"
 
-float CalculateGini(Dataset *dataset, std::vector<size_t> partition_sample_index_y, std::vector<size_t>partition_sample_index_n)
-{   
-    size_t partition_size_y = partition_sample_index_y.size();
-    size_t partition_size_n = partition_sample_index_n.size();
-    float gini_y = 1.0, gini_n = 1.0;
-    
-    size_t *class_count_y = (size_t*)malloc((dataset->num_classes + 1) * sizeof(size_t));
-    size_t *class_count_n = (size_t*)malloc((dataset->num_classes + 1) * sizeof(size_t));
-    for(size_t i = 0; i < (dataset->num_classes + 1); i++)
-    {
-        class_count_y[i] = 0;
-        class_count_n[i] = 0;
-    }
+#pragma region FUNCTION_DECLARTION
+static void FindBestSplitPoint(TreeNode *node, std::vector<std::vector<float>> &dataset, bool is_exsisting_data[], uint32_t n_classess, uint32_t min_samples_split);
+static SplitPoint EvaluateSplitPoint(std::vector<std::vector<float>> &dataset, bool is_existing_data[], uint32_t n_classes, uint32_t feature_idx);
+static float CalculateGini(std::vector<std::vector<float>> &dataset, uint32_t n_classes, bool is_existing_data_y[], bool is_existing_data_n[]);
+#pragma endregion // FUNCTION_DECLARATION
 
-#pragma region COUNT_NUM_SAMPLES_PER_CLASS
-    for(size_t i = 0; i < partition_size_y; i++)
-    {
-        size_t label = (dataset->training_set)[partition_sample_index_y[i]][dataset->label_index];
-        class_count_y[label]++;
-    }
-    for(size_t i = 0; i < partition_size_n; i++)
-    {
-        size_t label = (dataset->training_set)[partition_sample_index_n[i]][dataset->label_index];
-        class_count_n[label]++;
-    }
-#pragma endregion
-
-#pragma region CALCULATE_GINI
-    for(size_t i = 1; i <= dataset->num_classes; i++)
-    {
-        gini_y -= pow(((float)class_count_y[i]/partition_size_y), 2);
-    }
-    
-    for(size_t i = 1; i <= dataset->num_classes; i++)
-    {
-        gini_n -= pow(((float)class_count_n[i]/partition_size_n), 2);
-    }
-#pragma endregion
-
-    free(class_count_y);
-    free(class_count_n);
-    
-    // return weighted gini index of the split point
-    return ((float)partition_size_y / (partition_size_y + partition_size_n)) * gini_y + ((float)partition_size_n / (partition_size_y + partition_size_n)) * gini_n;
-}
-
-SplitPoint EvaluateSplitPoint(Dataset *dataset, std::vector<size_t> partition_sample_index, size_t feature_id)
+TreeNode* CreateDecisionTree(std::vector<std::vector<float>> &dataset, uint32_t n_classes, uint32_t min_samples_split)
 {
-    size_t partition_size = partition_sample_index.size();
-
-#pragma region SORT_SELECTED_FEATURE
-    std::vector<float> selected_feature;
-    for(size_t i = 0; i < partition_size; i++)
+    TreeNode *root;
+    try
     {
-        selected_feature.push_back((dataset->training_set)[partition_sample_index[i]][feature_id]);
+        root = new TreeNode;
     }
-    sort(selected_feature.begin(), selected_feature.end());
-#pragma endregion
-
-#pragma region TRY_ALL_POSSIBLE_SPLIT_POINTS
-    SplitPoint best;
-    best.score = 1.1; 
-    best.value = 0; 
-    best.feature = feature_id; 
-    for(size_t i = 1; i < partition_size; i++)
+    catch(const std::bad_alloc& error)
     {
-        if(selected_feature[i - 1] == selected_feature[i])
-        {
-            continue;
-        }
-        
-        float mid = (selected_feature[i - 1] + selected_feature[i]) / 2;
-
-        std::vector<size_t> partition_sample_index_y, partition_sample_index_n;
-        for(size_t j = 0; j < partition_size; j++)
-        {
-            if((dataset->training_set)[partition_sample_index[j]][feature_id] <= mid)
-            {
-                partition_sample_index_y.push_back(partition_sample_index[j]);
-            }
-            else
-            {
-                partition_sample_index_n.push_back(partition_sample_index[j]);
-            }
-        }
-        float score = CalculateGini(dataset, partition_sample_index_y, partition_sample_index_n);
-        if(score < best.score)
-        {
-            best.score = score;
-            best.value = mid;
-        }
-    }
-#pragma endregion
-
-    return best;
-}
-
-void FindBestSplitPoint(TreeNode *node, Dataset* dataset, std::vector<size_t> partition_samples_index, size_t eta, float pi)
-{
-#ifdef DEBUG
-    std::cout << "================ new node ====================" << std::endl;
-#endif
-
-    size_t partition_size = partition_samples_index.size();
-    size_t *class_count   = (size_t*)malloc((dataset->num_classes + 1) * sizeof(size_t));
-    if(class_count == NULL)
-    {
-        printf("./%s:%d: \033[31merror\033[0m: memory allocation error\n", __FILE__, __LINE__);
-        exit(1);
-    }
-    for(size_t i = 0; i <= dataset->num_classes; i++) class_count[i] = 0;
-    
-    // calculate the number of each class and find the maximum one
-    for(size_t i = 0; i < partition_size; i++)
-    {
-        size_t label = (dataset->training_set)[partition_samples_index[i]][dataset->label_index];
-        class_count[label]++;
-    }
-
-    size_t majority_class = 1;
-    for(size_t i = 2; i <= dataset->num_classes; i++)
-    {
-        if(class_count[majority_class] < class_count[i])
-        {
-            majority_class = i;
-        }
-    }
-
-#ifdef DEBUG
-    std::cout << partition_size << ", [ ";
-    for(size_t i = 1; i <= training_set->num_classes; i++)
-    {
-        std::cout << class_count[i] << " ";
-    }
-    std::cout << "]" << std::endl;
-#endif
-    
-    if(partition_size <= eta || ((float)class_count[majority_class] / partition_size) >= pi)
-    {
-        node->label = majority_class;
-        free(class_count);
-#ifdef DEBUG
-        std::cout << "label = " << node->label << std::endl;
-#endif
-        return;
-    }
-    free(class_count);
-
-    // initializa best split point
-    node->split_point.feature = 0; 
-    node->split_point.value = 0; 
-    node->split_point.score = 1.1;
-    
-    // find the best split point
-    for(size_t i = 0; i < dataset->dimension; i++)
-    {
-        SplitPoint feature_best_split_point = EvaluateSplitPoint(dataset, partition_samples_index, i);
-        if(node->split_point.score > feature_best_split_point.score)
-        {
-            node->split_point.score   = feature_best_split_point.score;
-            node->split_point.value   = feature_best_split_point.value;
-            node->split_point.feature = feature_best_split_point.feature;
-        }
-    }
-
-#ifdef DEBUG
-    std::cout << node->split_point.feature  << "<=" << node->split_point.value << "," << node->split_point.score << std::endl;
-#endif
-    
-    // partition data with best split point
-    std::vector<size_t> partition_samples_index_y, partition_samples_index_n;
-    for(size_t i = 0; i < partition_size; i++)
-    {
-        if((dataset->training_set)[partition_samples_index[i]][node->split_point.feature] <= node->split_point.value)
-        {
-            partition_samples_index_y.push_back(partition_samples_index[i]);
-        }
-        else
-        {
-            partition_samples_index_n.push_back(partition_samples_index[i]);
-        }
-    }
-
-    if(partition_samples_index_y.size() > 0)
-    {
-        node->left_child = (TreeNode*)malloc(sizeof(TreeNode));
-        if(node->left_child == NULL)
-        {
-            printf("./%s:%d: \033[31merror\033[0m: memory allocation error\n", __FILE__, __LINE__);;
-            exit(1);
-        }
-        
-        node->left_child->left_child = NULL;
-        node->left_child->right_child = NULL;
-        FindBestSplitPoint(node->left_child, dataset, partition_samples_index_y, eta, pi);
-    }
-
-    if(partition_samples_index_n.size() > 0)
-    {
-        node->right_child = (TreeNode*)malloc(sizeof(TreeNode));
-        if(node->right_child == NULL)
-        {
-            fprintf(stderr, "./%s:%d: \033[31merror\033[0m: memory allocation error\n", __FILE__, __LINE__);
-            exit(1);
-        }
-        node->right_child->left_child = NULL;
-        node->right_child->right_child = NULL;
-        FindBestSplitPoint(node->right_child, dataset, partition_samples_index_n, eta, pi);
-    }
-}
-
-TreeNode* CreateDecisionTree(Dataset *dataset, size_t eta, float pi)
-{
-    TreeNode *root = (TreeNode*)calloc(1, sizeof(TreeNode));
-    if(root == NULL)
-    {
-        printf("./%s:%d: \033[31merror\033[0m: memory allocation error\n", __FILE__, __LINE__);
+        printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());
         exit(1);
     }
 
     root->left_child = NULL;
     root->right_child = NULL;
 
-    std::vector<size_t> partition_samples_index;
-    for(size_t i = 0; i < (dataset->training_set).size(); i++)
+    bool *is_existing_data; 
+    try
     {
-        partition_samples_index.push_back(i);
+        is_existing_data = new bool[dataset.size()];
     }
-    FindBestSplitPoint(root, dataset, partition_samples_index, eta, pi);
+    catch(const std::bad_alloc& error)
+    {
+        printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());
+        exit(1);
+    }
+    memset(is_existing_data, true, dataset.size() * sizeof(bool));
+
+    FindBestSplitPoint(root, dataset, is_existing_data, n_classes, min_samples_split);
 
     return root;
 }
-
-size_t PredictByDecisionTree(TreeNode *root, std::vector<float> testing_sample)
+uint32_t PredictByDecisionTree(TreeNode *root, std::vector<float> &testing_sample)
 {
     if(root->left_child == NULL && root->right_child == NULL)
     {
         return root->label;
     }
+
     if(testing_sample[root->split_point.feature] <= root->split_point.value)
     {
         return PredictByDecisionTree(root->left_child, testing_sample);
@@ -248,4 +54,300 @@ size_t PredictByDecisionTree(TreeNode *root, std::vector<float> testing_sample)
         return PredictByDecisionTree(root->right_child, testing_sample);
     }
 }
+static void FindBestSplitPoint(TreeNode *node, std::vector<std::vector<float>> &dataset, bool is_exsisting_data[], uint32_t n_classess, uint32_t min_samples_split)
+{
+    // Store the number of data points within the partition
+    uint32_t n_existing_data = 0;
+
+    // calculate the number of samples of each class within the partition
+    uint32_t *class_counts;
+    try
+    {
+        class_counts = new uint32_t[n_classess + 1];
+        memset(class_counts, 0, (n_classess + 1) * sizeof(uint32_t));
+    }
+    catch(const std::bad_alloc &error)
+    {
+        printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
+        exit(1);
+    }
+     
+    for(uint32_t data_idx = 0, data_label_idx = dataset[0].size() - 1; data_idx < dataset.size(); data_idx++)
+    {
+        if(!is_exsisting_data[data_idx])
+        {
+            continue;
+        }
+        uint32_t data_label = dataset[data_idx][data_label_idx];
+        class_counts[data_label]++;
+    }
+    
+    #ifdef SHOW_TREE
+        std::cout << "--------------------------" << std::endl;
+        std::cout << "[";
+    #endif //SHOW_TREE
+    // Find the majority class within the partition
+    uint32_t majority_class_idx = 1;
+    for(uint32_t class_idx = 1; class_idx <= n_classess; class_idx++)
+    {
+        n_existing_data += class_counts[class_idx];
+        if(class_counts[majority_class_idx] < class_counts[class_idx])
+        {
+            majority_class_idx = class_idx;
+        }
+        #ifdef SHOW_TREE
+            std::cout << class_counts[class_idx] << " ";
+        #endif //SHOW_TREE
+    } 
+    #ifdef SHOW_TREE
+        std::cout << "]" << std::endl;
+    #endif //SHOW_TREE
+    // Check the stopping condition
+    if(n_existing_data <= min_samples_split || ((float)class_counts[majority_class_idx] / n_existing_data) >= 0.95)
+    {
+        node->label = majority_class_idx;
+        delete []class_counts;
+        return;
+    }
+    delete []class_counts;
+
+    // Initializa best split point
+    node->split_point.feature = 0; 
+    node->split_point.value = 0; 
+    node->split_point.score = 1.1;
+    
+    // Find the best split point
+    uint32_t n_dimensions = dataset[0].size() - 1; // Last column stores the label of the data points
+    for(uint32_t dim_idx = 0; dim_idx < n_dimensions; dim_idx++)
+    {
+        // Find the best split point of the feature
+        SplitPoint local_best_split_point = EvaluateSplitPoint(dataset, is_exsisting_data, n_classess, dim_idx);
+        if(node->split_point.score >= local_best_split_point.score)
+        {
+            node->split_point.score   = local_best_split_point.score;
+            node->split_point.value   = local_best_split_point.value;
+            node->split_point.feature = local_best_split_point.feature;
+        }
+    }
+    #ifdef SHOW_TREE
+        std::cout << node->split_point.feature << "<=" << node->split_point.value << ", class: " << majority_class_idx << std::endl;
+    #endif //SHOW_TREE
+    // partition data with best split point
+    uint32_t n_existing_data_y = 0;
+    bool *is_existing_data_y;
+    
+    uint32_t n_existing_data_n = 0;
+    bool *is_existing_data_n;
+    try
+    {
+        is_existing_data_y = new bool[dataset.size()];
+        memset(is_existing_data_y, false, dataset.size() * sizeof(bool));
+
+        is_existing_data_n = new bool[dataset.size()];
+        memset(is_existing_data_n, false, dataset.size() * sizeof(bool));
+    }
+    catch(const std::bad_alloc &error)
+    {
+        printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
+        exit(1);
+    }
+    
+    for(uint32_t data_idx = 0; data_idx < dataset.size(); data_idx++)
+    {
+        if(!is_exsisting_data[data_idx])
+        {
+            continue;
+        }
+        if(dataset[data_idx][node->split_point.feature] <= node->split_point.value)
+        {
+            is_existing_data_y[data_idx] = true;
+            n_existing_data_y++;
+        }
+        else
+        {
+            is_existing_data_n[data_idx] = true;
+            n_existing_data_n++;
+        }
+    }
+
+    if(n_existing_data_y > 0)
+    {
+        try
+        {
+            node->left_child = new TreeNode;
+        }
+        catch(const std::bad_alloc &error)
+        {
+            printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
+            exit(1);
+        }
+        node->left_child->left_child = NULL;
+        node->left_child->right_child = NULL;
+        FindBestSplitPoint(node->left_child, dataset, is_existing_data_y, n_classess, min_samples_split);
+    }
+
+    if(n_existing_data_n > 0)
+    {
+        try
+        {
+            node->right_child = new TreeNode;
+        }
+        catch(const std::bad_alloc &error)
+        {
+            printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
+            exit(1);
+        }
+        node->right_child->left_child = NULL;
+        node->right_child->right_child = NULL;
+        FindBestSplitPoint(node->right_child, dataset, is_existing_data_n, n_classess, min_samples_split);
+    }
+}
+static SplitPoint EvaluateSplitPoint(std::vector<std::vector<float>> &dataset, bool is_existing_data[], uint32_t n_classes, uint32_t feature_idx)
+{
+    // Tally the number of data in the partition
+    uint32_t n_existing_data = 0;
+    for(uint32_t data_idx = 0; data_idx < dataset.size(); data_idx++)
+    {
+        // Count only the existing data
+        if(is_existing_data[data_idx])
+        {
+            n_existing_data++;
+        }
+    }
+
+    std::vector<float> selected_feature(n_existing_data, 0);
+    for(uint32_t data_idx = 0, existing_data_idx = 0; data_idx < dataset.size(); data_idx++)
+    {
+        if(!is_existing_data[data_idx])
+        {
+            continue;
+        }
+        selected_feature[existing_data_idx++] = dataset[data_idx][feature_idx];
+    }
+    sort(selected_feature.begin(), selected_feature.end());
+
+    SplitPoint best;
+    best.value = 0; 
+    best.score = 1.1; // gini = [0 1]
+    best.feature = feature_idx;
+
+    // Try all possible split points
+    for(uint32_t sorted_data_idx = 1; sorted_data_idx < n_existing_data; sorted_data_idx++)
+    {
+        if(selected_feature[sorted_data_idx - 1] == selected_feature[sorted_data_idx])
+        {
+            continue;
+        }
+        
+        float mid_point = (selected_feature[sorted_data_idx - 1] + selected_feature[sorted_data_idx]) / 2;
+        bool *is_existing_data_y, *is_existing_data_n;
+        try
+        {
+            is_existing_data_y = new bool[dataset.size()];
+            memset(is_existing_data_y, false, dataset.size() * sizeof(bool));
+
+            is_existing_data_n = new bool[dataset.size()];
+            memset(is_existing_data_n, false, dataset.size() * sizeof(bool));
+        }
+        catch(const std::bad_alloc &error)
+        {
+            printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
+            exit(1);
+        }
+
+        for(uint32_t data_idx = 0; data_idx < dataset.size(); data_idx++)
+        {
+            if(!is_existing_data[data_idx])
+            {
+                continue;
+            }
+
+            if(dataset[data_idx][feature_idx] <= mid_point)
+            {
+                is_existing_data_y[data_idx] = true;
+            }
+            else
+            {
+                is_existing_data_n[data_idx] = true;
+            }
+        }
+
+        float score = CalculateGini(dataset, n_classes, is_existing_data_y, is_existing_data_n);
+        if(score <= best.score)
+        {
+            best.score = score;
+            best.value = mid_point;
+        }
+
+        delete[] is_existing_data_y;
+        delete[] is_existing_data_n;
+    }
+    return best;
+}
+static float CalculateGini(std::vector<std::vector<float>> &dataset, uint32_t n_classes, bool is_existing_data_y[], bool is_existing_data_n[])
+{   
+    uint32_t *class_counts_y, *class_counts_n;
+    try
+    {
+        class_counts_y = new uint32_t[n_classes + 1];
+        memset(class_counts_y, 0, (n_classes + 1) * sizeof(uint32_t));
+
+        class_counts_n = new uint32_t[n_classes + 1];
+        memset(class_counts_n, 0, (n_classes + 1) * sizeof(uint32_t));
+    }
+    catch(const std::bad_alloc &error)
+    {
+        printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
+        exit(1);
+    }
+    
+    uint32_t data_label_idx = dataset[0].size() - 1;
+    for(uint32_t data_idx = 0; data_idx < dataset.size(); data_idx++)
+    {
+        uint32_t data_label = dataset[data_idx][data_label_idx];
+        
+        if(is_existing_data_y[data_idx])
+        {
+            class_counts_y[data_label]++;
+        }
+        else if(is_existing_data_n[data_idx])
+        {
+            class_counts_n[data_label]++;
+        }
+    }
+
+    uint32_t n_existing_data_y = 0, n_existing_data_n = 0;
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
+    {
+        n_existing_data_y += class_counts_y[class_idx];
+        n_existing_data_n += class_counts_n[class_idx];
+    }
+
+    float gini_y = 1.0, gini_n = 1.0;
+    if(n_existing_data_y > 0)
+    {
+        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
+        {
+           float class_ratio_y = (float)class_counts_y[class_idx] / n_existing_data_y;
+            gini_y -= class_ratio_y * class_ratio_y;   
+        } 
+    }
+    if(n_existing_data_n > 0)
+    {
+        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
+        {
+            float class_ratio_n = (float)class_counts_n[class_idx] / n_existing_data_n;
+            gini_n -= class_ratio_n * class_ratio_n;
+        }
+        
+    }
+    
+    delete[] class_counts_y;
+    delete[] class_counts_n;
+
+    // return weighted gini index of the split point
+    return ((float)n_existing_data_y / (n_existing_data_y + n_existing_data_n)) * gini_y + ((float)n_existing_data_n / (n_existing_data_y + n_existing_data_n)) * gini_n;
+}
+
+
 

@@ -6,9 +6,9 @@
 #include <utility>
 #include <iostream>
 #include <algorithm>
-#include "k_means_pp.h"
-#include "prim.h"
-#include "file_operations.h"
+#include "../inc/k_means_pp.h"
+#include "../inc/prim.h"
+#include "../inc/file_operations.h"
 
 typedef struct fitness
 {

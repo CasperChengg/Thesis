@@ -1,27 +1,30 @@
-#include <ctime>
-#include "validation.h"
-#include "file_operations.h"
+#include <ctime> // timespec, clock_gettime
 #include "../inc/proposed.h"
+#include "../inc/validation.h"
+#include "../inc/file_operations.h"
+
 
 int main(int argc, char *argv[])
 {
     float elaped_time_ms = 0;
-    timespec start_ns, end_ns;
+    timespec start_ns = {0}, end_ns = {0};
     std::vector<Accuracies> multi_test_accuracies;
 
     std::string file_path = "../../dataset/" + (std::string)argv[1] + "-5-fold/" + (std::string)argv[1] + "-5-";
 
-    for(size_t i = 0; i < TEST_TIME; i++)
+    for(size_t test_time = 0; test_time < TEST_TIME; test_time++)
     {
         for(int k = 1; k <= K_FOLD; k++)
         {
-            std::string dataset_path = file_path + std::to_string(k);
-            Dataset dataset = ReadDataset(dataset_path);
-            clock_gettime(CLOCK_MONOTONIC, &start_ns);
-            Proposed<float>(dataset.training_set, dataset.num_classes, KNN);
-            Accuracies accuracies = Validation(&dataset, "decision_tree", ETA, PI);
-            clock_gettime(CLOCK_MONOTONIC, &end_ns);
+            std::string training_path = file_path + std::to_string(k) + "tra.dat";
+            std::string testing_path = file_path + std::to_string(k) + "tst.dat";
+            Dataset dataset = ReadTrainingAndTestingSet(training_path, testing_path);
 
+            clock_gettime(CLOCK_MONOTONIC, &start_ns);
+            Proposed<float>(dataset.training_set, dataset.n_classes, KNN);
+            Accuracies accuracies = Validation(dataset, "decision_tree", ETA);
+            clock_gettime(CLOCK_MONOTONIC, &end_ns);
+            
             elaped_time_ms += (float)(end_ns.tv_sec - start_ns.tv_sec) * 1000 + (float)(end_ns.tv_nsec - start_ns.tv_nsec) / 1000000;
             multi_test_accuracies.push_back(accuracies);
             

@@ -1,6 +1,6 @@
 #!/bin/bash
 declare -a file_array=(
-    "wine"
+    # "wine"
     # "hayes-roth"
     # "contraceptive" 
     # "penbased"
@@ -11,12 +11,12 @@ declare -a file_array=(
     # "yeast"
     # "ecoli"
     # "pageblocks"
-    # "shuttle"
+    "shuttle"
 )
 
 KNN=5
 K_FOLD=1
-TEST_TIME=1
+TEST_TIME=5
 
 ETA=10
 PI=0.95
@@ -53,7 +53,8 @@ echo -e "K_FOLD=$K_FOLD\nTEST_TIME=$TEST_TIME\nKNN=$KNN\nETA=$ETA\nPI=$PI\nUSE_K
 echo -e "CONSIDER_MIN=$CONSIDER_MIN\nKNN_DISTANCE=$KNN_DISTANCE\nDIVIDE_BY_DISTANCE=$DIVIDE_BY_DISTANCE\nMULTIPLE_BY_DISTANCE=$MULTIPLE_BY_DISTANCE" >> "../experiment.txt"
 for i in "${file_array[@]}"
 do
-    echo "========== $i ===========" >> "../experiment.txt"
+    # echo "========== $i ===========" >> "../experiment.txt"
+    echo "========== $i ==========="
     # nohup ./main "$i" >> "../experiment.txt" 2> /dev/null &
     ./main "$i"
     wait $!

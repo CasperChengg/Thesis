@@ -2,15 +2,13 @@
 #define DEBUG
 
 #pragma region FUNCTION_DECLARATION
-template <typename T>
-void CalculateClassCounts(std::vector<std::vector<T>>dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, uint32_t n_data_items);
+void CalculateClassCounts(std::vector<std::vector<float>>dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, uint32_t n_data_items);
 template<typename T>
 void SeperateMajMin(std::vector<std::vector<T>> &dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, bool is_majority[], bool is_minority[], uint32_t n_data_items);
 template<typename T>
 void CalculateFitnesses(std::vector<std::vector<T>> &dataset, bool is_existing_data[], bool is_majority[], fitness fitnesses[], uint32_t k, uint32_t n_data_items);
 void RouletteWheelSelection(bool is_existing_data[], bool is_majority[], fitness fitnesses[], uint32_t n_retained_majority, uint32_t n_data_items);
-template<typename T>
-float CalculateDiversity(std::vector<std::vector<T>> &dataset, bool is_existing_data[], uint32_t n_data_items, uint32_t n_classes);
+float CalculateDiversity(std::vector<std::vector<float>> &dataset, bool is_existing_data[], uint32_t n_data_items, uint32_t n_classes);
 #pragma endregion // FUNCTION_DECLARATION
 
 template<typename T>
@@ -38,10 +36,21 @@ void Proposed(std::vector<std::vector<T>>dataset, uint32_t n_classes, uint32_t k
     // Store the fitness of data
     fitness *fitnesses = new fitness[n_data_items];
 
-    for(uint32_t n_iterations = 0;;){
+    CalculateClassCounts(dataset, is_existing_data, class_counts, n_classes, n_data_items);
+    #ifdef DEBUG
+        std::cout << "-----Initial Class Counts-----" << std::endl;
+        std::cout << "[ ";
+        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
+        {
+            std::cout << class_counts[class_idx] << " ";
+        }
+        std::cout << "]" << std::endl;
+    #endif // DEBUG
+
+    for(uint32_t n_iterations = 0;; n_iterations++){
         
         // Calculate the number of samples per class
-        CalculateClassCounts<T>(dataset, is_existing_data, class_counts, n_classes, n_data_items);
+        CalculateClassCounts(dataset, is_existing_data, class_counts, n_classes, n_data_items);
 
         // Decide minority classes based on the proposed method
         SeperateMajMin<T>(dataset, is_existing_data, class_counts, n_classes, is_majority, is_minority, n_data_items);
@@ -62,15 +71,15 @@ void Proposed(std::vector<std::vector<T>>dataset, uint32_t n_classes, uint32_t k
         }
         n_existing_data = n_existing_maj + n_existing_min;
 
-#ifdef DEBUG
-        std::cout << "==========" << n_iterations << "'th iteration" << "==========" << std::endl;
-        std::cout << "[ ";
-        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
-        {
-            std::cout << class_counts[class_idx] << " ";
-        }
-        std::cout << "]" << std::endl;
-#endif // DEBUG
+        #ifdef DEBUG
+            std::cout << "==========" << n_iterations << "'th iteration" << "==========" << std::endl;
+            std::cout << "[ ";
+            for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
+            {
+                std::cout << class_counts[class_idx] << " ";
+            }
+            std::cout << "]" << std::endl;
+        #endif // DEBUG
 
         // Calculate Majority Fitness
         CalculateFitnesses<T>(dataset, is_existing_data, is_majority, fitnesses, k, n_data_items);
@@ -80,23 +89,24 @@ void Proposed(std::vector<std::vector<T>>dataset, uint32_t n_classes, uint32_t k
         if(n_retained_majority > n_existing_maj)
         {
             float diversity = CalculateDiversity(dataset, is_existing_data, n_data_items, n_classes);
-#ifdef DEBUG
             std::cout << "diversity: " << diversity << std::endl;
-#endif //DEBUG
+            #ifdef DEBUG
+                // std::cout << "diversity: " << diversity << std::endl;
+            #endif //DEBUG
             break;
         }
         else
         {
             RouletteWheelSelection(is_existing_data, is_majority, fitnesses, n_retained_majority, n_data_items);
+            float diversity = CalculateDiversity(dataset, is_existing_data, n_data_items, n_classes);
+            std::cout << "diversity: " << diversity << std::endl;
         }
         
-        
-        float diversity = CalculateDiversity(dataset, is_existing_data, n_data_items, n_classes);
 
-#ifdef DEBUG
-        std::cout << "diversity: " << diversity << std::endl;
-#endif // DEBUG
-
+        #ifdef DEBUG
+            // std::cout << "diversity: " << diversity << std::endl;
+        #endif // DEBUG
+        break;
     }
 
     // Remove any non-existing data
@@ -107,16 +117,16 @@ void Proposed(std::vector<std::vector<T>>dataset, uint32_t n_classes, uint32_t k
         }
     }
 
-    CalculateClassCounts<T>(dataset, is_existing_data, class_counts, n_classes, n_data_items);
-#ifdef DEBUG
-    std::cout << "-----Final Result-----" << std::endl;
-    std::cout << "[ ";
-    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
-    {
-        std::cout << class_counts[class_idx] << " ";
-    }
-    std::cout << "]" << std::endl;
-#endif // DEBUG
+    CalculateClassCounts(dataset, is_existing_data, class_counts, n_classes, n_data_items);
+    #ifdef DEBUG
+        std::cout << "-----Final Result-----" << std::endl;
+        std::cout << "[ ";
+        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
+        {
+            std::cout << class_counts[class_idx] << " ";
+        }
+        std::cout << "]" << std::endl;
+    #endif // DEBUG
 
 #pragma region FREEING_MEMORY
     delete []class_counts;
@@ -128,8 +138,7 @@ void Proposed(std::vector<std::vector<T>>dataset, uint32_t n_classes, uint32_t k
 
 }
 
-template<typename T>
-void CalculateClassCounts(std::vector<std::vector<T>>dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, uint32_t n_data_items)
+void CalculateClassCounts(std::vector<std::vector<float>>dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, uint32_t n_data_items)
 {
     if(class_counts == NULL)
     {
@@ -210,7 +219,7 @@ void CalculateFitnesses(std::vector<std::vector<T>> &dataset, bool is_existing_d
 
     for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
     {
-        if(!(is_existing_data[data_idx]) || !(is_majority[data_idx]))
+        if(!(is_existing_data[data_idx]) || (is_majority[data_idx]))
         {
             continue;
         }
@@ -231,21 +240,23 @@ void CalculateFitnesses(std::vector<std::vector<T>> &dataset, bool is_existing_d
         for(uint32_t distance_idx = 0; distance_idx < k; distance_idx++)
         {
             uint32_t nn_idx = distance[distance_idx].first;
-            if(is_majority[nn_idx])
+            if(!is_majority[nn_idx])
             {
                 continue;
             }
+        
             fitnesses[nn_idx].minority_rnn_counts++;
             fitnesses[nn_idx].distance_to_minority_rnn += distance[distance_idx].second;
         }
     }
-
+    
     for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
     {
         if((!is_existing_data[data_idx]) || (!is_majority[data_idx]))
         {
             continue;
         }
+       
         fitnesses[data_idx].fitness = fitnesses[data_idx].minority_rnn_counts * fitnesses[data_idx].distance_to_minority_rnn;
     }
 
@@ -261,7 +272,7 @@ void RouletteWheelSelection(bool is_existing_data[], bool is_majority[], fitness
         {
             total_fitness += fitnesses[data_idx].fitness;
         }
-    } 
+    }  
 
     // Calculate the upper limit of each pocket in the roulette wheel
     float *pocket_limits = new float[n_data_items];
@@ -272,10 +283,6 @@ void RouletteWheelSelection(bool is_existing_data[], bool is_majority[], fitness
     pocket_limits[0] = fitnesses[0].fitness / total_fitness; 
     for(uint32_t pocket_idx = 1; pocket_idx < n_data_items; pocket_idx++)
     {
-        if(pocket_limits[pocket_idx] == 0)
-        {
-            continue;
-        }
         pocket_limits[pocket_idx] = pocket_limits[pocket_idx - 1] + fitnesses[pocket_idx].fitness / total_fitness;
         last_nonzero_pocket_idx = pocket_idx;
     }
@@ -299,20 +306,21 @@ void RouletteWheelSelection(bool is_existing_data[], bool is_majority[], fitness
     for(uint32_t selected_item_idx = 0; selected_item_idx < n_retained_majority; selected_item_idx++)
     {
         float rand_0_1 = distrib(gen);
-
+        std::cout << rand_0_1 << std::endl;
         uint32_t selected_pocket_idx;
         for(selected_pocket_idx = 0; selected_pocket_idx < n_data_items; selected_pocket_idx++)
         {
-            if(rand_0_1 <= pocket_limits[selected_item_idx])
+            if(rand_0_1 <= pocket_limits[selected_pocket_idx])
             {
                 break;
             }
         }
-
+        
         if(is_non_selected_majority[selected_pocket_idx])
         {
             is_non_selected_majority[selected_pocket_idx] = false;
             is_existing_data[selected_pocket_idx] = true;
+            std::cout << selected_pocket_idx << std::endl;
         }
         else
         {
@@ -324,11 +332,10 @@ void RouletteWheelSelection(bool is_existing_data[], bool is_majority[], fitness
     delete []is_non_selected_majority;
 }
 
-template<class T>
-float CalculateDiversity(std::vector<std::vector<T>> &dataset, bool is_existing_data[], uint32_t n_data_items, uint32_t n_classes)
+float CalculateDiversity(std::vector<std::vector<float>> &dataset, bool is_existing_data[], uint32_t n_data_items, uint32_t n_classes)
 {
     // Separate n-class dataset into n single-class datasets
-    std::vector<std::vector<T>> class_dataset[n_classes + 1];
+    std::vector<std::vector<float>> class_dataset[n_classes + 1];
     for(uint32_t data_idx = 0, data_label_idx = dataset[0].size() - 1; data_idx < n_data_items; data_idx++)
     {
         if(!is_existing_data[data_idx])
@@ -339,8 +346,9 @@ float CalculateDiversity(std::vector<std::vector<T>> &dataset, bool is_existing_
         class_dataset[data_label].push_back(dataset[data_idx]);
     }
 
+    
     // Get representative data points by KMeansPP within each single-class dataset
-    std::vector<std::vector<T>> representative_points;
+    std::vector<std::vector<float>> representative_points;
     std::vector<uint32_t> representative_points_label;
     for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
     {   
@@ -349,14 +357,14 @@ float CalculateDiversity(std::vector<std::vector<T>> &dataset, bool is_existing_
         n_clusters = (n_clusters == 0)? 1:n_clusters;
         
         // KMeansPP may produce centroids without any points; these centroids will be removed before returning
-        std::vector<std::vector<T>> centroids = KMeansPP<T>(class_dataset[class_idx], n_clusters, 100, 1e-4);
+        std::vector<std::vector<float>> centroids = KMeansPP(class_dataset[class_idx], n_clusters, 100, 1e-4);
         representative_points.insert(representative_points.end(), centroids.begin(), centroids.end());
 
         // centroids.size() <= n_clusters
         uint32_t n_valid_centroids = centroids.size();
         representative_points_label.insert(representative_points_label.end(), n_valid_centroids, class_idx);
     }
-
+    
     // Turn representative points into a complete graph, where the weight is the distance between the source vertex and the destination vertex
     uint32_t n_representative_points = representative_points.size();
     std::vector<std::vector<float>> complete_graph_adjacency_matrix(n_representative_points, std::vector<float>(n_representative_points, 0));
@@ -367,10 +375,11 @@ float CalculateDiversity(std::vector<std::vector<T>> &dataset, bool is_existing_
             complete_graph_adjacency_matrix[src_vertex_idx][dst_vertex_idx] = EuclideanDistance(representative_points[src_vertex_idx], representative_points[dst_vertex_idx]);
         }
     }
-
+    // return 0.0;
     // Get the MST of the complete graph formed by the representative points
     std::vector<std::vector<float>>mst_adjacency_matrix = Prim<float>(complete_graph_adjacency_matrix);
     complete_graph_adjacency_matrix.clear();
+    // return 0.0;
 
     // Calculate the ratio of neighboring vertices from different classes to the total number of neighboring vertices in the MST for each class
     std::vector<uint32_t> n_neighbors_per_class(n_classes + 1, 0);

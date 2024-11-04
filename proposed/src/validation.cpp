@@ -1,76 +1,127 @@
-#include "./validation.h"
+#include "../inc/validation.h"
 
 #define TP 0
 #define FP 1
 #define FN 2
 
-Accuracies Validation(Dataset *dataset, std::string model_type, size_t eta, float pi)
+#pragma region FUNCTION_DECLARATION
+static void CalculateClassCounts(std::vector<std::vector<float>> &dataset, uint32_t n_classes, uint32_t class_counts[]);
+static Accuracies CalculateAccuracies(std::vector<std::vector<float>> &dataset, TreeNode *root, uint32_t n_classes);
+#pragma endregion
+
+Accuracies Validation(Dataset &dataset, std::string model_type, uint32_t min_samples_split)
 {
     Accuracies accuracies;
-    size_t **confusion_matrix = (size_t**)calloc(dataset->num_classes + 1, sizeof(size_t*));
-    if(confusion_matrix == NULL)
+    if(model_type == "decision_tree")
     {
-        printf("./%s:%d: \033[31merror\033[0m: memory allocation error\n", __FILE__, __LINE__);
+        // Train the decision tree classifier
+        TreeNode *root = CreateDecisionTree(dataset.training_set, dataset.n_classes, min_samples_split);
+        accuracies = CalculateAccuracies(dataset.testing_set, root, dataset.n_classes);
+    }
+
+    return accuracies;
+}
+static void CalculateClassCounts(std::vector<std::vector<float>> &dataset, uint32_t n_classes, uint32_t class_counts[])
+{
+    if(class_counts == NULL)
+    {
+        printf("./%s:%d: error: null pointer\n", __FILE__, __LINE__);
         exit(1);
     }
 
-    for(size_t i = 1; i <= dataset->num_classes; i++)
+    uint32_t data_label_idx = dataset[0].size() - 1;
+
+    memset(class_counts, 0, (n_classes + 1) * sizeof(uint32_t));
+    for(uint32_t data_idx = 0; data_idx < dataset.size(); data_idx++)
+    {   
+        uint32_t data_label = dataset[data_idx][data_label_idx];
+        class_counts[data_label]++;
+    }
+}
+static Accuracies CalculateAccuracies(std::vector<std::vector<float>> &dataset, TreeNode *root, uint32_t n_classes)
+{
+    // Allocate memory for 2D confusion matrix
+    uint32_t **confusion_matrix;
+    try
     {
-        // {TP, FP, FN} for each class
-        confusion_matrix[i] = (size_t*)calloc(3, sizeof(size_t));
-        if(confusion_matrix[i] == NULL)
+        // index 0 store nothing
+        confusion_matrix = new uint32_t*[n_classes + 1];
+        memset(confusion_matrix, 0, (n_classes + 1) * sizeof(uint32_t));
+    }
+    catch(const std::bad_alloc &error)
+    {
+        printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
+        exit(1);
+    }
+
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
+    {
+        try
         {
-            printf("./%s:%d: \033[31merror\033[0m: memory allocation error\n", __FILE__, __LINE__);
+            // {TP, FP, FN} for each class
+            confusion_matrix[class_idx] = new uint32_t[3];
+            memset(confusion_matrix[class_idx], 0, 3 * sizeof(uint32_t));
+        }
+        catch(const std::bad_alloc &error)
+        {
+            printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
             exit(1);
         }
     }
-    
-    if(model_type == "decision_tree")
+
+    // Validate the pretrained decision tree classifier using the testing set
+    uint32_t data_label_idx = dataset[0].size() - 1;
+    for(uint32_t testing_data_idx = 0; testing_data_idx < dataset.size(); testing_data_idx++)
     {
-        TreeNode *root = CreateDecisionTree(dataset, eta, pi);
-        for(size_t i = 0; i < (dataset->testing_set).size(); i++)
+        uint32_t data_label      = dataset[testing_data_idx][data_label_idx]; // ground truth 
+        uint32_t predicted_label = PredictByDecisionTree(root, dataset[testing_data_idx]);  // predicted result
+        
+        if(predicted_label == data_label)
         {
-            size_t label     = (dataset->testing_set)[i][dataset->label_index]; // ground truth 
-            size_t label_hat = PredictByDecisionTree(root, (dataset->testing_set)[i]); // label_hat = model.predict();
-            
-            if(label == label_hat)
-            {
-                confusion_matrix[label_hat][TP]++;
-            }
-            else
-            {
-                confusion_matrix[label_hat][FP]++;
-                confusion_matrix[label][FN]++;
-            }
+            confusion_matrix[predicted_label][TP]++;
+        }
+        else
+        {
+            confusion_matrix[predicted_label][FP]++;
+            confusion_matrix[data_label][FN]++;
         }
     }
-    
-    accuracies.precision = 0;
-    accuracies.recall    = 0;
-    accuracies.f1_score  = 0;
-    accuracies.g_mean    = 1;
-    
-    // In case there are no samples with a specific class in the testing set.
-    size_t num_non_zero_classes_in_testing_set = 0; 
-    for(size_t i = 1; i <= dataset->num_classes; i++)
+
+    // Tally the number of samples per class
+    uint32_t *class_counts;
+    try
     {
-        if((dataset->testing_set_class_counts[i] == 0))
+        class_counts = new uint32_t[n_classes + 1];
+    }
+    catch(const std::bad_alloc &error)
+    {
+        printf("./%s:%d: error: %s\n", __FILE__, __LINE__, error.what());;
+        exit(1);
+    }
+    CalculateClassCounts(dataset, n_classes, class_counts);
+
+    // Calculate accuracies
+    uint32_t n_non_zero_classes = 0;
+    Accuracies accuracies= {0.f, 0.f, 0.f, 1.f};
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
+    {
+        // In case there are no samples with a specific class in the testing set.
+        if(class_counts[class_idx] == 0)
         {
-            // std::cout << "[empty class]" <<  std::endl;
             continue;
         }
-        num_non_zero_classes_in_testing_set++;
+        n_non_zero_classes++;
         
         float precision = 0;
-        if(confusion_matrix[i][TP] + confusion_matrix[i][FN] > 0)
+        if(confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FN] > 0)
         {
-            precision = (float)confusion_matrix[i][TP] / (float)(confusion_matrix[i][TP] + confusion_matrix[i][FN]);
+            precision = (float)confusion_matrix[class_idx][TP] / (float)(confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FN]);
         }
 
         float recall = 0;    
-        if(confusion_matrix[i][TP] + confusion_matrix[i][FP] > 0)
+        if(confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FP] > 0)
         {
-            recall = (float)confusion_matrix[i][TP] / (float)(confusion_matrix[i][TP] + confusion_matrix[i][FP]);
+            recall = (float)confusion_matrix[class_idx][TP] / (float)(confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FP]);
         }
 
         float f1_score = 0;
@@ -78,17 +129,22 @@ Accuracies Validation(Dataset *dataset, std::string model_type, size_t eta, floa
         {
             f1_score = 2 * precision * recall / (precision + recall);
         }
-
+        
         accuracies.precision += precision;
         accuracies.recall    += recall;
         accuracies.f1_score  += f1_score;
         accuracies.g_mean    *= recall;
-        // std::cout << "[" << precision << "," << recall << "," << f1_score << "]" <<  std::endl;
     }
-    // std::cout << std::endl;
-    accuracies.precision /= num_non_zero_classes_in_testing_set;
-    accuracies.recall    /= num_non_zero_classes_in_testing_set;
-    accuracies.f1_score  /= num_non_zero_classes_in_testing_set;
-    accuracies.g_mean = pow(accuracies.g_mean, 1.0 / num_non_zero_classes_in_testing_set);
+
+    // Get average accuracies
+    accuracies.precision /= n_non_zero_classes;
+    accuracies.recall    /= n_non_zero_classes;
+    accuracies.f1_score  /= n_non_zero_classes;
+    accuracies.g_mean     = pow(accuracies.g_mean, 1.f / n_non_zero_classes);
+
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++) delete []confusion_matrix[class_idx];
+    delete []confusion_matrix;
+    delete []class_counts;
+
     return accuracies;
 }
