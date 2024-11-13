@@ -1,45 +1,46 @@
-#include "./random_under_sampling.h"
+#include "../inc/random_under_sampling.h"
 
-size_t FindLeastMinorityClass(Dataset *dataset)
+static uint32_t CalculateSamplingSize(const std::vector<uint32_t> &class_counts)
 {
-    size_t minority_label = 1;
-    for(size_t i = 2; i <= dataset->num_classes; i++)
-    {
-        if((dataset->training_set_class_counts)[minority_label] > (dataset->training_set_class_counts)[i])
-        {
-            minority_label = i;
+    uint32_t smallest_class_count = std::numeric_limits<uint32_t>::max();
+    for(uint32_t class_idx = 1; class_idx < class_counts.size(); class_idx++){
+        if(smallest_class_count > class_counts[class_idx]){
+            smallest_class_count = class_counts[class_idx];
         }
     }
-    return minority_label;
+
+    return smallest_class_count;
 }
 
-void RandomUnderSampling(Dataset *dataset)
+void RandomUnderSampling(std::vector<std::vector<float>> &training_set, const uint32_t n_classes)
 {
-    size_t least_minority_label = FindLeastMinorityClass(dataset);
-    size_t sampling_size  = (dataset->training_set_class_counts)[least_minority_label];
-
-    std::vector<size_t> sample_index_in_class[dataset->num_classes + 1];
-    for(size_t i = 0; i < (dataset->training_set).size(); i++)
-    {
-        size_t label = (dataset->training_set)[i][dataset->label_index];
-        sample_index_in_class[label].push_back(i);
+    const uint32_t label_idx = training_set[0].size() - 1;
+    std::vector<uint32_t> data_idxes_by_class[n_classes + 1];
+    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
+        uint32_t training_data_label = training_set[training_data_idx][label_idx];
+        data_idxes_by_class[training_data_label].push_back(training_data_idx);
     }
+
+    std::vector<uint32_t> class_counts(n_classes + 1, 0);
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
+        class_counts[class_idx] = data_idxes_by_class[class_idx].size();
+    }
+
+    uint32_t sampling_size  = CalculateSamplingSize(class_counts);
 
     std::vector<std::vector<float>> preprocessed_data;
-    for(size_t i = 1; i <= dataset->num_classes; i++)
-    {
-        if(i != least_minority_label)
-        {
-            unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-            shuffle(sample_index_in_class[i].begin(), sample_index_in_class[i].end(), std::default_random_engine(seed));
-        }
+    preprocessed_data.reserve(n_classes * sampling_size); 
+    for(uint32_t  class_idx = 1; class_idx <= n_classes; class_idx++){
+        uint32_t seed = std::chrono::system_clock::now().time_since_epoch().count();
+        shuffle(data_idxes_by_class[class_idx].begin(), data_idxes_by_class[class_idx].end(), 
+                                                                std::default_random_engine(seed));
 
-        for(size_t j = 0; j < sampling_size; j++)
-        {
-            preprocessed_data.push_back(dataset->training_set[sample_index_in_class[i][j]]);
+        for(uint32_t shuffle_data_idx = 0; shuffle_data_idx < sampling_size; shuffle_data_idx++){
+            uint32_t data_idx = data_idxes_by_class[class_idx][shuffle_data_idx];    
+            preprocessed_data.push_back(training_set[data_idx]);
         }
     }
-    dataset->training_set.clear();
-    dataset->training_set = preprocessed_data; 
-    GetDatasetInfo(dataset, true);
+
+    training_set.clear();
+    training_set = preprocessed_data;
 }
