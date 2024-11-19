@@ -12,15 +12,14 @@ include_directories(${CMAKE_SOURCE_DIR}/../../inc
 
 # Source files
 set(ALL_SOURCE_FILES
-    "${CMAKE_SOURCE_DIR}/../src/decision_tree_classifier.cpp"
-    "${CMAKE_SOURCE_DIR}/../src/file_operations.cpp"
-    "${CMAKE_SOURCE_DIR}/../src/validation.cpp"
-    "${CMAKE_SOURCE_DIR}/src/proposed.cpp"
+    "${CMAKE_SOURCE_DIR}/../../src/decision_tree_classifier.cpp"
+    "${CMAKE_SOURCE_DIR}/../../src/file_operations.cpp"
+    "${CMAKE_SOURCE_DIR}/../../src/validation.cpp"
+    "${CMAKE_SOURCE_DIR}/src/random_under_sampling.cpp"
     "${CMAKE_SOURCE_DIR}/src/main.cpp"
 )
 
 # Define configurable parameters with cache
-set(KNN 5 CACHE STRING "Set number of NN")
 set(TEST_TIME 20 CACHE STRING "Set test time")
 set(K_FOLD 5 CACHE STRING "Set number of folds")
 set(MODEL_TYPE "decision_tree" CACHE STRING "Set base classifier")
@@ -32,7 +31,6 @@ add_executable(main ${ALL_SOURCE_FILES})
 
 # Add compile definitions for main target
 target_compile_definitions(main PRIVATE
-    KNN=${KNN}
     TEST_TIME=${TEST_TIME}
     K_FOLD=${K_FOLD}
     MODEL_TYPE="${MODEL_TYPE}"

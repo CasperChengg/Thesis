@@ -1,413 +1,223 @@
 #include "../inc/proposed.h"
-#define DEBUG
 
-#pragma region FUNCTION_DECLARATION
-void CalculateClassCounts(std::vector<std::vector<float>>dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, uint32_t n_data_items);
-template<typename T>
-void SeperateMajMin(std::vector<std::vector<T>> &dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, bool is_majority[], bool is_minority[], uint32_t n_data_items);
-template<typename T>
-void CalculateFitnesses(std::vector<std::vector<T>> &dataset, bool is_existing_data[], bool is_majority[], fitness fitnesses[], uint32_t k, uint32_t n_data_items);
-void RouletteWheelSelection(bool is_existing_data[], bool is_majority[], fitness fitnesses[], uint32_t n_retained_majority, uint32_t n_data_items);
-float CalculateDiversity(std::vector<std::vector<float>> &dataset, bool is_existing_data[], uint32_t n_data_items, uint32_t n_classes);
-#pragma endregion // FUNCTION_DECLARATION
-
-template<typename T>
-void Proposed(std::vector<std::vector<T>>dataset, uint32_t n_classes, uint32_t k)
+static std::vector<uint32_t> CalculateClassCounts(const std::vector<std::vector<float>> &training_set, 
+                                                    const uint32_t n_classes)
 {
-    // Original data size
-    uint32_t n_data_items = dataset.size();
-
-    // Store the number of samples per class
-    uint32_t *class_counts = new uint32_t[n_classes + 1];
-
-    // Store whether the data exists in the current iteration
-    // is_existing_data = is_majority & is_minoritys
-    bool *is_existing_data = new bool[n_data_items];
-    memset(is_existing_data, true, n_data_items * sizeof(bool));
+    const uint32_t training_label_idx = training_set[0].size() - 1;
     
-    // Store whether the data is majority in the current iteration
-    bool *is_majority = new bool[n_data_items];
-    memset(is_majority, false, n_data_items * sizeof(bool));
+    // Class labels start from 1, so n_classes requires (n_classes + 1) space for direct indexing
+    std::vector<uint32_t> class_counts((n_classes + 1), 0); 
 
-    // Store whether the data is minority in the current iteration
-    bool *is_minority = new bool[n_data_items];
-    memset(is_minority, false, n_data_items * sizeof(bool));
-    
-    // Store the fitness of data
-    fitness *fitnesses = new fitness[n_data_items];
-
-    CalculateClassCounts(dataset, is_existing_data, class_counts, n_classes, n_data_items);
-    #ifdef DEBUG
-        std::cout << "-----Initial Class Counts-----" << std::endl;
-        std::cout << "[ ";
-        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
-        {
-            std::cout << class_counts[class_idx] << " ";
-        }
-        std::cout << "]" << std::endl;
-    #endif // DEBUG
-
-    for(uint32_t n_iterations = 0;; n_iterations++){
-        
-        // Calculate the number of samples per class
-        CalculateClassCounts(dataset, is_existing_data, class_counts, n_classes, n_data_items);
-
-        // Decide minority classes based on the proposed method
-        SeperateMajMin<T>(dataset, is_existing_data, class_counts, n_classes, is_majority, is_minority, n_data_items);
-        
-        uint32_t n_existing_data = 0;
-        uint32_t n_existing_maj  = 0;
-        uint32_t n_existing_min  = 0;
-        for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
-        {
-            if(is_majority[data_idx])
-            {
-                n_existing_maj++;
-            }
-            else
-            {
-                n_existing_min++;
-            }
-        }
-        n_existing_data = n_existing_maj + n_existing_min;
-
-        #ifdef DEBUG
-            std::cout << "==========" << n_iterations << "'th iteration" << "==========" << std::endl;
-            std::cout << "[ ";
-            for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
-            {
-                std::cout << class_counts[class_idx] << " ";
-            }
-            std::cout << "]" << std::endl;
-        #endif // DEBUG
-
-        // Calculate Majority Fitness
-        CalculateFitnesses<T>(dataset, is_existing_data, is_majority, fitnesses, k, n_data_items);
-        
-        // Temporarily decided, waiting for experimentation
-        uint32_t n_retained_majority = n_existing_min;
-        if(n_retained_majority > n_existing_maj)
-        {
-            float diversity = CalculateDiversity(dataset, is_existing_data, n_data_items, n_classes);
-            std::cout << "diversity: " << diversity << std::endl;
-            #ifdef DEBUG
-                // std::cout << "diversity: " << diversity << std::endl;
-            #endif //DEBUG
-            break;
-        }
-        else
-        {
-            RouletteWheelSelection(is_existing_data, is_majority, fitnesses, n_retained_majority, n_data_items);
-            float diversity = CalculateDiversity(dataset, is_existing_data, n_data_items, n_classes);
-            std::cout << "diversity: " << diversity << std::endl;
-        }
-        
-
-        #ifdef DEBUG
-            // std::cout << "diversity: " << diversity << std::endl;
-        #endif // DEBUG
-        break;
+    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){   
+        uint32_t training_data_label = training_set[training_data_idx][training_label_idx];
+        class_counts[training_data_label]++;
     }
 
-    // Remove any non-existing data
-    for(int data_idx = (n_data_items - 1); data_idx >= 0; data_idx--)
-    {
-        if(!is_existing_data[data_idx]){
-            dataset.erase(dataset.begin() + data_idx);
-        }
-    }
-
-    CalculateClassCounts(dataset, is_existing_data, class_counts, n_classes, n_data_items);
-    #ifdef DEBUG
-        std::cout << "-----Final Result-----" << std::endl;
-        std::cout << "[ ";
-        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
-        {
-            std::cout << class_counts[class_idx] << " ";
-        }
-        std::cout << "]" << std::endl;
-    #endif // DEBUG
-
-#pragma region FREEING_MEMORY
-    delete []class_counts;
-    delete []is_existing_data;
-    delete []is_majority;
-    delete []is_minority;
-    delete []fitnesses;
-#pragma endregion // FREEING_MEMORY
-
+    return class_counts;
 }
 
-void CalculateClassCounts(std::vector<std::vector<float>>dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, uint32_t n_data_items)
+static std::vector<float> CalculateMinorityScores(const Accuracies &training_set_accuracies, const uint32_t n_classes)
 {
-    if(class_counts == NULL)
-    {
-        printf("./%s:%d: error: null pointer\n", __FILE__, __LINE__);
-        exit(1);
+    std::vector<float> majority_scores(n_classes + 1, 0.f);
+
+    // float max_diversity = 0.f, min_diversity = std::numeric_limits<float>::max();
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
+        // std::cout << training_set_accuracies.FPR[class_idx] << " " << training_set_accuracies.FNR[class_idx] << std::endl;                                   
+        majority_scores[class_idx] = (training_set_accuracies.FPR[class_idx]) / (training_set_accuracies.FNR[class_idx] + 1);
+        // if(diversity[class_idx] > max_diversity){
+        //     max_diversity = diversity[class_idx];
+        // }
+        // if(diversity[class_idx] < min_diversity){
+        //     min_diversity = diversity[class_idx];
+        // }
     }
 
-    uint32_t data_label_idx = dataset[0].size() - 1;
+    // if(max_diversity == min_diversity){
+    //     for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
+    //         diversity[class_idx] = 1;
+    //     }
+    // }
+    // else{
+    //     for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
+    //         diversity[class_idx] = (diversity[class_idx] - min_diversity) / (max_diversity - min_diversity);
+    //     }
+    // }
 
-    memset(class_counts, 0, (n_classes + 1) * sizeof(uint32_t));
-    for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
-    {   
-        // Count only the existing data
-        if(!is_existing_data[data_idx])
-        {
-            continue;
-        }
-        uint32_t data_label = dataset[data_idx][data_label_idx];
-        class_counts[data_label]++;
-    }
+    return majority_scores;
 }
 
-template<typename T>
-void SeperateMajMin(std::vector<std::vector<T>> &dataset, bool is_existing_data[], uint32_t class_counts[], uint32_t n_classes, bool is_majority[], bool is_minority[], unsigned int n_data_items)
-{
-    if(class_counts == NULL)
-    {
-        printf("./%s:%d: error: null pointer\n", __FILE__, __LINE__);
-        exit(1);
-    }
-    
-    uint32_t data_label_idx = dataset[0].size() - 1;
-
-    // Temporarily decided, waiting for experimentation
-    // minority = [class_i, class_counts[i] <= avg_class_counts]
-    // majority = [class_j, class_counts[j] >  avg_class_counts]
-    float avg_class_counts = (float)dataset.size() / n_classes;
-
-    memset(is_majority, false, n_data_items * sizeof(bool));
-    memset(is_minority, false, n_data_items * sizeof(bool));
-    
-    for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
-    {   
-        // Count only the existing data
-        if(!is_existing_data[data_idx])
-        {
-            continue;
-        }
-
-        uint32_t data_label = dataset[data_idx][data_label_idx];
-        if(class_counts[data_label] <= avg_class_counts)
-        {
-            is_minority[data_idx] = true; 
-        }
-        else
-        {
-            is_majority[data_idx] = true;
-        }
-    }
-}
-
-float EuclideanDistance(std::vector<float> &src, std::vector<float> &dst)
+static float EuclideanDistance(const std::vector<float> &src, const std::vector<float> &dst)
 {
     float square_distance = 0;
     // the last column of vector stores the label
-    for(uint32_t i = 0; i < src.size() - 1; i++)
+    for(uint32_t attr_idx = 0; attr_idx < src.size() - 1; attr_idx++)
     {
-        square_distance += pow(src[i] - dst[i], 2);
+        float diff = src[attr_idx] - dst[attr_idx];
+        square_distance += diff * diff;
     }
+
     return sqrt(square_distance);
 }
 
-template<typename T>
-void CalculateFitnesses(std::vector<std::vector<T>> &dataset, bool is_existing_data[], bool is_majority[], fitness fitnesses[], uint32_t k, uint32_t n_data_items)
+static void CalculateSamplingWeights(const std::vector<std::vector<float>> &training_set, const std::vector<float> &majority_scores, const uint32_t k, std::vector<float> &sampling_weights)
 {
-    uint32_t data_label_idx = dataset[0].size() - 1;
-    memset(fitnesses, 0, n_data_items * sizeof(fitness));
+    uint32_t training_data_label_idx = training_set[0].size() - 1;
+    std::vector<uint32_t> minority_rnn_counts(training_set.size(), 0);
+    std::vector<float> distances_to_minority_rnn(training_set.size(), 0.f);
 
-    for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
-    {
-        if(!(is_existing_data[data_idx]) || (is_majority[data_idx]))
-        {
+    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
+        uint32_t training_data_label = training_set[training_data_idx][training_data_label_idx];
+        if(majority_scores[training_data_label] == 0.f){
             continue;
         }
-    
-        // Find K Nearest Neighbors
-        std::vector<std::pair<uint32_t, float>> distance;
-        for(uint32_t dst_data_idx = 0; dst_data_idx < n_data_items; dst_data_idx++)
-        {
-            if((dst_data_idx == data_idx) || (!is_existing_data[dst_data_idx]))
-            {
-                continue;
+
+        auto compare = [](const std::pair<uint32_t, float> &a, const std::pair<uint32_t, float> &b){return a.second < b.second;};
+        std::priority_queue<std::pair<uint32_t, float>, std::vector<std::pair<uint32_t, float>>, decltype(compare)> k_nearest_neighbors(compare);
+        for(uint32_t dst_data_idx = 0; dst_data_idx < training_set.size(); dst_data_idx++){
+            k_nearest_neighbors.push({dst_data_idx, EuclideanDistance(training_set[training_data_idx], training_set[dst_data_idx])});
+            if(k_nearest_neighbors.size() > k){
+                k_nearest_neighbors.pop();
             }
-            distance.push_back(std::make_pair(dst_data_idx, EuclideanDistance(dataset[data_idx], dataset[dst_data_idx])));
         }
-        sort(distance.begin(), distance.end(), [](const std::pair<uint32_t, float> &a, const std::pair<uint32_t, float> &b ){return a.second < b.second;});
-        
+
         // Total the number of Minority Reverse Nearest Neighbors (MRNN) and the distance to MRNN for each majority sample
-        for(uint32_t distance_idx = 0; distance_idx < k; distance_idx++)
-        {
-            uint32_t nn_idx = distance[distance_idx].first;
-            if(!is_majority[nn_idx])
-            {
-                continue;
+        while(!k_nearest_neighbors.empty()){
+            std::pair<uint32_t, float> nearest_neighbor = k_nearest_neighbors.top();
+            uint32_t nearest_neighbor_idx   = nearest_neighbor.first;
+            uint32_t nearest_neighbor_label = training_set[nearest_neighbor_idx][training_data_label_idx];
+            if((majority_scores[training_data_label] < majority_scores[nearest_neighbor_label])){
+                minority_rnn_counts[nearest_neighbor_idx]++;
+                distances_to_minority_rnn[nearest_neighbor_idx] += nearest_neighbor.second;
             }
-        
-            fitnesses[nn_idx].minority_rnn_counts++;
-            fitnesses[nn_idx].distance_to_minority_rnn += distance[distance_idx].second;
+            k_nearest_neighbors.pop();
         }
     }
     
-    for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
-    {
-        if((!is_existing_data[data_idx]) || (!is_majority[data_idx]))
-        {
-            continue;
+    sampling_weights.assign(training_set.size(), 0.f);
+    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
+        uint32_t training_data_label = training_set[training_data_idx][training_data_label_idx];
+        
+        if(distances_to_minority_rnn[training_data_idx] == 0.f){
+            sampling_weights[training_data_idx] = 0.f;
         }
-       
-        fitnesses[data_idx].fitness = fitnesses[data_idx].minority_rnn_counts * fitnesses[data_idx].distance_to_minority_rnn;
+        else{
+            sampling_weights[training_data_idx] = minority_rnn_counts[training_data_idx] / distances_to_minority_rnn[training_data_idx] * majority_scores[training_data_label];
+        }
+        // std::cout << training_data_idx << "," << sampling_weights[training_data_idx] << std::endl;
     }
-
 }
 
-void RouletteWheelSelection(bool is_existing_data[], bool is_majority[], fitness fitnesses[], uint32_t n_retained_majority, uint32_t n_data_items)
+static void RouletteWheelSelection(std::vector<bool> &selection_result, std::vector<float> fitness, const uint32_t n_rounds)
 {
     // Sum up the total fitness in order to do the sum-to-one normalization
-    float total_fitness = 0.0;
-    for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
-    {
-        if(is_majority[data_idx])
-        {
-            total_fitness += fitnesses[data_idx].fitness;
-        }
-    }  
+    float total_fitness = std::accumulate(fitness.begin(), fitness.end(), 0.f);
 
     // Calculate the upper limit of each pocket in the roulette wheel
-    float *pocket_limits = new float[n_data_items];
-    memset(pocket_limits, 0, n_data_items * sizeof(float));
+    std::vector<float> cumulative_prob(fitness.size(), 0.f);
 
-    uint32_t last_nonzero_pocket_idx = 0;
     // Sum-to-one Normalization
-    pocket_limits[0] = fitnesses[0].fitness / total_fitness; 
-    for(uint32_t pocket_idx = 1; pocket_idx < n_data_items; pocket_idx++)
-    {
-        pocket_limits[pocket_idx] = pocket_limits[pocket_idx - 1] + fitnesses[pocket_idx].fitness / total_fitness;
-        last_nonzero_pocket_idx = pocket_idx;
+    uint32_t last_nonzero_prob_idx = 0;
+    cumulative_prob[0] = fitness[0] / total_fitness; 
+    for(uint32_t fitness_idx = 1; fitness_idx < fitness.size(); fitness_idx++){
+        cumulative_prob[fitness_idx] = cumulative_prob[fitness_idx - 1] + fitness[fitness_idx] / total_fitness;
+        // std::cout << fitness[fitness_idx] << std::endl;
+        if(fitness[fitness_idx] == 0.f){
+            last_nonzero_prob_idx = fitness_idx;
+        }
     }
-    pocket_limits[last_nonzero_pocket_idx] = 1.0;
+    cumulative_prob[last_nonzero_prob_idx] = 1.0;
 
     // Set up the random generator
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> distrib(0.0, 1.0);
-
-    // Remove the existance of all the majority samples
-    for(uint32_t data_idx = 0; data_idx < n_data_items; data_idx++)
-    {
-        is_existing_data[data_idx] = !is_majority[data_idx] & is_existing_data[data_idx];
-    }
-    
-    bool *is_non_selected_majority = new bool[n_data_items];
-    memcpy(is_non_selected_majority, is_majority, n_data_items * sizeof(bool));
     
     // Draw without replacement
-    for(uint32_t selected_item_idx = 0; selected_item_idx < n_retained_majority; selected_item_idx++)
+    for(uint32_t round = 0; round < n_rounds; round++)
     {
         float rand_0_1 = distrib(gen);
-        std::cout << rand_0_1 << std::endl;
-        uint32_t selected_pocket_idx;
-        for(selected_pocket_idx = 0; selected_pocket_idx < n_data_items; selected_pocket_idx++)
-        {
-            if(rand_0_1 <= pocket_limits[selected_pocket_idx])
-            {
+        uint32_t selected_individual_idx;
+        
+        for(selected_individual_idx = 0; selected_individual_idx < fitness.size(); selected_individual_idx++){
+            // std::cout << cumulative_prob[selected_individual_idx] << std::endl;
+            if(rand_0_1 <= cumulative_prob[selected_individual_idx]){
                 break;
             }
         }
-        
-        if(is_non_selected_majority[selected_pocket_idx])
-        {
-            is_non_selected_majority[selected_pocket_idx] = false;
-            is_existing_data[selected_pocket_idx] = true;
-            std::cout << selected_pocket_idx << std::endl;
+        // std::cout << selected_individual_idx << std::endl;
+        if(!selection_result[selected_individual_idx]){
+            selection_result[selected_individual_idx] = true;
         }
-        else
-        {
-            selected_item_idx--;
+        else{
+            round--;
         }
     }
-
-    delete []pocket_limits;
-    delete []is_non_selected_majority;
 }
 
-float CalculateDiversity(std::vector<std::vector<float>> &dataset, bool is_existing_data[], uint32_t n_data_items, uint32_t n_classes)
+void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_classes, const uint32_t k, const ModelParameters model_parameters)
 {
-    // Separate n-class dataset into n single-class datasets
-    std::vector<std::vector<float>> class_dataset[n_classes + 1];
-    for(uint32_t data_idx = 0, data_label_idx = dataset[0].size() - 1; data_idx < n_data_items; data_idx++)
-    {
-        if(!is_existing_data[data_idx])
-        {
-            continue;
-        }
-        uint32_t data_label = dataset[data_idx][data_label_idx];
-        class_dataset[data_label].push_back(dataset[data_idx]);
-    }
-
     
-    // Get representative data points by KMeansPP within each single-class dataset
-    std::vector<std::vector<float>> representative_points;
-    std::vector<uint32_t> representative_points_label;
-    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
-    {   
-        // Temporarily decided, waiting for experimentation
-        uint32_t n_clusters = 0.1 * class_dataset[class_idx].size();
-        n_clusters = (n_clusters == 0)? 1:n_clusters;
-        
-        // KMeansPP may produce centroids without any points; these centroids will be removed before returning
-        std::vector<std::vector<float>> centroids = KMeansPP(class_dataset[class_idx], n_clusters, 100, 1e-4);
-        representative_points.insert(representative_points.end(), centroids.begin(), centroids.end());
+    Accuracies training_set_accuracies = Validation(training_set, training_set, n_classes, model_parameters);
 
-        // centroids.size() <= n_clusters
-        uint32_t n_valid_centroids = centroids.size();
-        representative_points_label.insert(representative_points_label.end(), n_valid_centroids, class_idx);
-    }
+    std::vector<float> majority_scores  = CalculateMinorityScores(training_set_accuracies, n_classes);
+    std::vector<float> sampling_weights(training_set.size(), 0.f);
+    CalculateSamplingWeights(training_set, majority_scores, k, sampling_weights);
     
-    // Turn representative points into a complete graph, where the weight is the distance between the source vertex and the destination vertex
-    uint32_t n_representative_points = representative_points.size();
-    std::vector<std::vector<float>> complete_graph_adjacency_matrix(n_representative_points, std::vector<float>(n_representative_points, 0));
-    for(uint32_t src_vertex_idx = 0; src_vertex_idx < n_representative_points; src_vertex_idx++)
-    {
-        for(uint32_t dst_vertex_idx = 0; dst_vertex_idx < n_representative_points; dst_vertex_idx++)
-        {
-            complete_graph_adjacency_matrix[src_vertex_idx][dst_vertex_idx] = EuclideanDistance(representative_points[src_vertex_idx], representative_points[dst_vertex_idx]);
-        }
-    }
-    // return 0.0;
-    // Get the MST of the complete graph formed by the representative points
-    std::vector<std::vector<float>>mst_adjacency_matrix = Prim<float>(complete_graph_adjacency_matrix);
-    complete_graph_adjacency_matrix.clear();
-    // return 0.0;
-
-    // Calculate the ratio of neighboring vertices from different classes to the total number of neighboring vertices in the MST for each class
-    std::vector<uint32_t> n_neighbors_per_class(n_classes + 1, 0);
-    std::vector<uint32_t> n_diff_class_neighbors_per_class(n_classes + 1, 0);
-
-    for(uint32_t src_vertex_idx = 0; src_vertex_idx < n_representative_points; src_vertex_idx++)
-    {
-        uint32_t src_vertex_label = representative_points_label[src_vertex_idx];
-        for(uint32_t dst_vertex_idx = 0; dst_vertex_idx < n_representative_points; dst_vertex_idx++)
-        {
-            if(mst_adjacency_matrix[src_vertex_idx][dst_vertex_idx] > 0)
-            {
-                uint32_t dst_vertex_label = representative_points_label[dst_vertex_idx];
-                n_neighbors_per_class[src_vertex_label]++;
-                if(src_vertex_label != dst_vertex_label)
-                {
-                    n_diff_class_neighbors_per_class[src_vertex_label]++;
-                }
-            }
+    uint32_t n_removed_candidate = 0;
+    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
+        if(sampling_weights[training_data_idx] > 0.f){
+            n_removed_candidate++;
         }
     }
 
-    float diversity = 0;
-    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
-    {
-        diversity += (float)n_diff_class_neighbors_per_class[class_idx] / n_neighbors_per_class[class_idx];
+    #ifdef DEBUG
+        std::vector<uint32_t> class_counts = CalculateClassCounts(training_set, n_classes);
+        std::cout << "[Dataset Overview]"  << std::endl;
+        std::cout << "-Size             :" << training_set.size()    << std::endl;
+        std::cout << "-Dimension        :" << training_set[0].size() << std::endl;
+        std::cout << "-Data Distribution:" << std::endl;
+        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
+            std::cout << "\tClass" << class_idx << ": " << class_counts[class_idx];
+            std::cout << "(" << (float)class_counts[class_idx] / training_set.size() * 100 << "%, ";
+            std::cout << majority_scores[class_idx] << ")" << std::endl; 
+        }
+        std::cout << std::endl;
+    #endif // DEBUG
+
+    std::vector<bool> is_removed(training_set.size(), false);
+    uint32_t n_removed = (float)training_set.size() * training_set_accuracies.macro_FPR;
+    if(n_removed > n_removed_candidate){
+        n_removed = n_removed_candidate;
     }
-    return diversity;
+
+    #ifdef DEBUG
+        std::cout << "[Preprocessing Detail]" << std::endl;
+        std::cout << "-Macro FPR             :" <<  training_set_accuracies.macro_FPR << std::endl;
+        std::cout << "-Num Removed Candidate :" <<  n_removed_candidate  << std::endl;
+        std::cout << "-Sampling Size         :" <<  n_removed  << std::endl << std::endl;
+    #endif
+
+    RouletteWheelSelection(is_removed, sampling_weights, n_removed);
+
+    for(int training_data_idx = (training_set.size() - 1); training_data_idx >= 0; training_data_idx--){
+        if(is_removed[training_data_idx]){
+            training_set.erase(training_set.begin() + training_data_idx);
+        }
+    }
+
+    #ifdef DEBUG
+        class_counts = CalculateClassCounts(training_set, n_classes);
+        training_set_accuracies = Validation(training_set, training_set, n_classes, model_parameters);
+        majority_scores  = CalculateMinorityScores(training_set_accuracies, n_classes);
+        std::cout << "[Preprocessing Summary]" << std::endl;
+        std::cout << "-Size             :" << training_set.size()    << std::endl;
+        std::cout << "-Dimension        :" << training_set[0].size() << std::endl;
+        std::cout << "-Data Distribution:" << std::endl;
+        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
+            std::cout << "\tClass" << class_idx << ": " << class_counts[class_idx];
+            std::cout << "(" << (float)class_counts[class_idx] / training_set.size() * 100 << "%, ";
+            std::cout << majority_scores[class_idx] << ")" << std::endl; 
+        }
+    #endif // DEBUG
 }
 
-template void Proposed(std::vector<std::vector<float>>dataset, uint32_t n_classes, uint32_t k);

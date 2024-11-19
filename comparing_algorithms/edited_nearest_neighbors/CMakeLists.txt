@@ -12,10 +12,10 @@ include_directories(${CMAKE_SOURCE_DIR}/../../inc
 
 # Source files
 set(ALL_SOURCE_FILES
-    "${CMAKE_SOURCE_DIR}/../src/decision_tree_classifier.cpp"
-    "${CMAKE_SOURCE_DIR}/../src/file_operations.cpp"
-    "${CMAKE_SOURCE_DIR}/../src/validation.cpp"
-    "${CMAKE_SOURCE_DIR}/src/proposed.cpp"
+    "${CMAKE_SOURCE_DIR}/../../src/decision_tree_classifier.cpp"
+    "${CMAKE_SOURCE_DIR}/../../src/file_operations.cpp"
+    "${CMAKE_SOURCE_DIR}/../../src/validation.cpp"
+    "${CMAKE_SOURCE_DIR}/src/edited_nearest_neighbors.cpp"
     "${CMAKE_SOURCE_DIR}/src/main.cpp"
 )
 

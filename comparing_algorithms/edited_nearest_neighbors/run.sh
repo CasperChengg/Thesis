@@ -44,7 +44,6 @@ for file in "${file_array[@]}"
 do
     echo "========== $file ===========" >> "$filename"
     nohup ./main "$file" >> "$filename" 2> /dev/null &
-    # ./main "$file"
     wait $!
 done
 echo "Finish: $(date +"%Y-%m-%d %H:%M:%S")" >> "$filename"

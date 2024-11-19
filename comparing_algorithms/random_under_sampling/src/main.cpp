@@ -1,7 +1,8 @@
 #include <ctime> // timespec, clock_gettime
-#include "../../inc/validation.h"
-#include "../../inc/file_operations.h"
-#include "../inc/proposed.h"
+#include "../../../inc/decision_tree_classifier.h"
+#include "../../../inc/file_operations.h"
+#include "../../../inc/validation.h"
+#include "../inc/random_under_sampling.h"
 
 typedef struct MultiTestMetrics{
     std::vector<float> precision;
@@ -23,11 +24,8 @@ float GetMultiTestAverage(const std::vector<float> &multi_test_score)
 
 int main(int argc, char *argv[])
 {
-#ifdef DEBUG
-    std::cout << "====================Dataset Processing Report ====================" << std::endl;
-#endif //DEBUG
-    std::string file_path = "../../datasets/" + (std::string)argv[1] + "-5-fold/" + (std::string)argv[1] + "-5-";
-
+    std::string file_path = "../../../dataset/" + (std::string)argv[1] + "-5-fold/" + (std::string)argv[1] + "-5-";
+    
     ModelParameters model_parameters = {
         .model_type = MODEL_TYPE,
         .min_samples_split = MIN_SAMPLES_SPLIT,
@@ -43,7 +41,7 @@ int main(int argc, char *argv[])
 
             timespec start_ns = {0}, end_ns = {0};
             clock_gettime(CLOCK_MONOTONIC, &start_ns);
-            Proposed(dataset.training_set, dataset.n_classes, KNN, model_parameters);
+            RandomUnderSampling(dataset.training_set, dataset.n_classes);
             Accuracies accuracies = Validation(dataset.training_set, dataset.testing_set, dataset.n_classes, model_parameters);
             clock_gettime(CLOCK_MONOTONIC, &end_ns);
             float elaped_time_ms = (float)(end_ns.tv_sec - start_ns.tv_sec) * 1000 + 
@@ -56,18 +54,10 @@ int main(int argc, char *argv[])
             multi_test_metrics.elapsed_time_ms.push_back(elaped_time_ms);
         }
     }
-#ifdef DEBUG
-    std::cout << "-Testing Result" << std::endl;
-    std::cout << "\t" << GetMultiTestAverage(multi_test_metrics.precision) << std::endl;
-    std::cout << "\t" << GetMultiTestAverage(multi_test_metrics.recall)    << std::endl;
-    std::cout << "\t" << GetMultiTestAverage(multi_test_metrics.f1_score)  << std::endl;
-    std::cout << "\t" << GetMultiTestAverage(multi_test_metrics.g_mean)    << std::endl;
-    std::cout << "\t" << GetMultiTestAverage(multi_test_metrics.elapsed_time_ms)  << std::endl;
-#else
+
     std::cout << GetMultiTestAverage(multi_test_metrics.precision) << std::endl;
     std::cout << GetMultiTestAverage(multi_test_metrics.recall)    << std::endl;
     std::cout << GetMultiTestAverage(multi_test_metrics.f1_score)  << std::endl;
     std::cout << GetMultiTestAverage(multi_test_metrics.g_mean)    << std::endl;
     std::cout << GetMultiTestAverage(multi_test_metrics.elapsed_time_ms)  << std::endl;
-#endif
 }

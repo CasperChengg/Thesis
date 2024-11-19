@@ -1,23 +1,17 @@
 #ifndef PROPOSED_H
 #define PROPOSED_H
 
+// #define DEBUG
+
 #include <cmath>
-#include <bitset>
-#include <utility>
+#include <random>
+#include <queue>
+#include <utility> // std::pair
 #include <iostream>
 #include <algorithm>
-#include "../inc/k_means_pp.h"
-#include "../inc/prim.h"
-#include "../inc/file_operations.h"
+#include "../../inc/validation.h"
+#include "../../inc/file_operations.h"
 
-typedef struct fitness
-{
-    uint32_t minority_rnn_counts;
-    float distance_to_minority_rnn;
-    float fitness;
-}fitness;
-
-template <typename T>
-void Proposed(std::vector<std::vector<T>>dataset, uint32_t n_classes, uint32_t k);
+void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_classes, const uint32_t k, const ModelParameters model_parameters);
 
 #endif
