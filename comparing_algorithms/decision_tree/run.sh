@@ -3,23 +3,6 @@ declare -a file_array=(
     "balance"
     "ecoli"
     "glass"
-    # "hayes-roth"
-    # "movement_libras"
-    # "new-thyroid"
-    # "optdigits"
-    # "pageblocks"
-    # "penbased"
-    # "satimage"
-    # "segment"
-    # "shuttle"
-    # "tae"
-    # "texture"
-    # "thyroid"
-    # "vehicle"
-    # "vowel"
-    # "wine"
-    # "winequality-red"
-    # "winequality-white"
 )
    
 K_FOLD=5

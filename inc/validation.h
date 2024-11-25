@@ -11,8 +11,7 @@ typedef struct Accuracies{
     float macro_recall;
     float macro_f1_score;
     float g_mean;
-    std::vector<float> FDR; // False Discrovery Rate
-    std::vector<float> FOR; // False Omission Rate
+    std::vector<std::vector<uint32_t>> confusion_matrix; 
 }Accuracies;
 
 typedef struct ModelParameters{
