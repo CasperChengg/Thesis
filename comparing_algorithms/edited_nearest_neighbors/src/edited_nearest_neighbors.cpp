@@ -35,24 +35,36 @@ float EuclideanDistance(const std::vector<float> &src, const std::vector<float> 
     return sqrt(square_distance);
 }
 
-std::vector<uint32_t> FindKNearestNeighbors(const std::vector<std::vector<float>> &dataset, const uint32_t src_idx, const uint32_t k)
+uint32_t CountNumSameLabelInKNN(const std::vector<std::vector<float>> &training_set, const uint32_t src_idx, const uint32_t k)
 {
-    std::vector<std::pair<uint32_t, float>> distance_pair(dataset.size(), std::pair<uint32_t, float>(0, 0.f));
-    for(uint32_t data_idx = 0; data_idx < dataset.size(); data_idx++)
-    {
-        distance_pair[data_idx].first  = data_idx;
-        distance_pair[data_idx].second = EuclideanDistance(dataset[data_idx], dataset[src_idx]);
-    }
-    distance_pair[src_idx].second = std::numeric_limits<float>::max();
-    sort(distance_pair.begin(),distance_pair.end(),[] (const std::pair<uint32_t, float> &a, const std::pair<uint32_t, float> &b ){return a.second < b.second;});
+    uint32_t training_label_idx = training_set[0].size() - 1;
+    uint32_t src_data_label = training_set[src_idx][training_label_idx];
 
-    std::vector<uint32_t> knn_idxes(k, 0);
-    for(uint32_t nn_idx = 0; nn_idx < k; nn_idx++)
-    {
-        knn_idxes[nn_idx] = distance_pair[nn_idx].first;
+    auto compare = [](const std::pair<uint32_t, float> &a, const std::pair<uint32_t, float> &b){return a.second < b.second;};
+    std::priority_queue<std::pair<uint32_t, float>, std::vector<std::pair<uint32_t, float>>, decltype(compare)> k_nearest_neighbors(compare);
+    for(uint32_t dst_data_idx = 0; dst_data_idx < training_set.size(); dst_data_idx++){
+        if(dst_data_idx == src_idx){
+            continue;
+        }
+        k_nearest_neighbors.push({dst_data_idx, EuclideanDistance(training_set[src_idx], training_set[dst_data_idx])});
+        if(k_nearest_neighbors.size() > k){
+            k_nearest_neighbors.pop();
+        }
+    }
+
+    uint32_t n_same_label = 0;
+    while(!k_nearest_neighbors.empty()){
+        std::pair<uint32_t, float> nearest_neighbor = k_nearest_neighbors.top();
+        uint32_t nearest_neighbor_idx   = nearest_neighbor.first;
+        uint32_t nearest_neighbor_label = training_set[nearest_neighbor_idx][training_label_idx];
+        if(nearest_neighbor_label == src_data_label){
+            n_same_label++;
+        }
+
+        k_nearest_neighbors.pop();
     }
     
-    return knn_idxes;
+    return n_same_label;
 }
 
 void EditedNearestNeighbors(std::vector<std::vector<float>> &training_set, const uint32_t n_classes, const uint32_t k)
@@ -68,17 +80,9 @@ void EditedNearestNeighbors(std::vector<std::vector<float>> &training_set, const
             continue;
         }
 
-        std::vector<uint32_t> knn_idxes = FindKNearestNeighbors(training_set, training_data_idx, k);
+        uint32_t n_same_label = CountNumSameLabelInKNN(training_set, training_data_idx, k);
 
-        uint32_t num_same_label = 0;
-        uint32_t training_data_label = training_set[training_data_idx][training_label_idx];
-        for(uint32_t nn_idx = 0; nn_idx < k; nn_idx++){
-            if(training_set[knn_idxes[nn_idx]][training_label_idx] == training_data_label){
-                num_same_label++;
-            }
-        }
-
-        if(num_same_label == k)
+        if(n_same_label == k)
         {    
             IsReserved[training_data_idx] = true;
         }

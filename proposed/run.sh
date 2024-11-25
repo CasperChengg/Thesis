@@ -1,22 +1,30 @@
 #!/bin/bash
 declare -a file_array=(
-    "wine"
-    "hayes-roth"
-    "contraceptive" 
-    "penbased"
-    "new-thyroid"
-    "dermatology"
     "balance"
-    "glass"
-    "yeast"
     "ecoli"
+    "glass"
+    "hayes-roth"
+    "movement_libras"
+    "new-thyroid"
+    "optdigits"
     "pageblocks"
+    "penbased"
+    "satimage"
+    "segment"
     "shuttle"
+    "tae"
+    "texture"
+    "thyroid"
+    "vehicle"
+    "vowel"
+    "wine"
+    "winequality-red"
+    "winequality-white"
 )
 
 KNN=5    
 K_FOLD=5
-TEST_TIME=20
+TEST_TIME=12
                                                 
 MODEL_TYPE="decision_tree"
 MIN_SAMPLES_SPLIT=10
@@ -44,6 +52,7 @@ for file in "${file_array[@]}"
 do
     echo "========== $file ===========" >> "$filename"
     nohup ./main "$file" >> "$filename" 2> /dev/null &
+    # echo "========== $file ==========="
     # ./main "$file"
     wait $!
 done

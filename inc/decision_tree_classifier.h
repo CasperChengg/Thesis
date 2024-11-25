@@ -1,8 +1,6 @@
 #ifndef DECISION_TREE_H
 #define DECISION_TREE_H
 
-// #define SHOW_TREE
-
 #include <cmath>
 #include <vector>
 #include <cstring> // memset

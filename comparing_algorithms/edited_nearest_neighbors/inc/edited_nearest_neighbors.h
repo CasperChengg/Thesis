@@ -4,6 +4,7 @@
 #include <cmath>
 #include <vector>
 #include <cstdint>
+#include <queue>
 #include <utility> // std::pair
 #include <algorithm>
 

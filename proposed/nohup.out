@@ -9,3 +9,14 @@ Scanning dependencies of target main
 [ 83%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
 [100%] Linking CXX executable main
 [100%] Built target main
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/m11202122/proposed/build
+Scanning dependencies of target main
+[ 16%] Building CXX object CMakeFiles/main.dir/src/proposed.cpp.o
+[ 33%] Linking CXX executable main
+[100%] Built target main
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/m11202122/proposed/build
+[100%] Built target main

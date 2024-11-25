@@ -5,23 +5,19 @@ static float CalculateGini(const std::vector<std::vector<float>> &training_set, 
     std::vector<uint32_t> class_counts_y((n_classes + 1), 0);
     std::vector<uint32_t> class_counts_n((n_classes + 1), 0);
     
-    uint32_t data_label_idx = training_set[0].size() - 1;
-    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++)
-    {
-        uint32_t data_label = training_set[training_data_idx][data_label_idx];
-        if(is_existing_data_y[training_data_idx])
-        {
-            class_counts_y[data_label]++;
+    uint32_t training_label_idx = training_set[0].size() - 1;
+    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
+        uint32_t training_data_label = training_set[training_data_idx][training_label_idx];
+        if(is_existing_data_y[training_data_idx]){
+            class_counts_y[training_data_label]++;
         }
-        else if(is_existing_data_n[training_data_idx])
-        {
-            class_counts_n[data_label]++;
+        else if(is_existing_data_n[training_data_idx]){
+            class_counts_n[training_data_label]++;
         }
     }
 
     uint32_t n_existing_data_y = 0, n_existing_data_n = 0;
-    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++)
-    {
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
         n_existing_data_y += class_counts_y[class_idx];
         n_existing_data_n += class_counts_n[class_idx];
     }
@@ -77,14 +73,13 @@ static SplitPoint EvaluateSplitPoint(const std::vector<std::vector<float>> &trai
         }
         
         float mid_point = (selected_feature[sorted_data_idx - 1] + selected_feature[sorted_data_idx]) / 2;
-        
+
         std::vector<bool> is_existing_data_y(training_set.size(), false);
         std::vector<bool> is_existing_data_n(training_set.size(), false);
         for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
             if(!is_existing_data[training_data_idx]){
                 continue;
             }
-
             if(training_set[training_data_idx][feature_idx] <= mid_point){
                 is_existing_data_y[training_data_idx] = true;
             }
@@ -92,10 +87,8 @@ static SplitPoint EvaluateSplitPoint(const std::vector<std::vector<float>> &trai
                 is_existing_data_n[training_data_idx] = true;
             }
         }
-
         float score = CalculateGini(training_set, n_classes, is_existing_data_y, is_existing_data_n);
-        if(score <= best.score)
-    {
+        if(score <= best.score){
             best.score = score;
             best.value = mid_point;
         }

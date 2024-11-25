@@ -11,14 +11,17 @@ typedef struct MultiTestMetrics{
     std::vector<float> elapsed_time_ms;
 }MultiTestMetrics;
 
-float GetMultiTestAverage(const std::vector<float> &multi_test_score)
+inline float GetKFoldTestAverage(const std::vector<float> &k_fold_test_metric)
 {
-    float total_score = 0.f;
-    for(const float score : multi_test_score){
-        total_score += score;
-    }
+    return std::accumulate(k_fold_test_metric.begin(), k_fold_test_metric.end(), 0.f) / k_fold_test_metric.size();
+}
 
-    return total_score / multi_test_score.size();
+inline float GetMultiTestAverage(const std::vector<float> &multi_test_metric)
+{
+    float total_score = std::accumulate(multi_test_metric.begin(), multi_test_metric.end(), 0.f);
+    total_score -=  *std::max_element(multi_test_metric.begin(), multi_test_metric.end());
+    total_score -=  *std::min_element(multi_test_metric.begin(), multi_test_metric.end()); 
+    return total_score / (multi_test_metric.size() - 2);
 }
 
 int main(int argc, char *argv[])
@@ -36,6 +39,7 @@ int main(int argc, char *argv[])
     MultiTestMetrics multi_test_metrics = {{}, {}, {}, {}, {}};
 
     for(uint32_t test_time = 0; test_time < TEST_TIME; test_time++){
+        MultiTestMetrics k_fold_test_metrics = {{}, {}, {}, {}, {}};
         for(uint32_t k = 1; k <= K_FOLD; k++){
             std::string training_path = file_path + std::to_string(k) + "tra.dat";
             std::string testing_path = file_path + std::to_string(k) + "tst.dat";
@@ -49,12 +53,18 @@ int main(int argc, char *argv[])
             float elaped_time_ms = (float)(end_ns.tv_sec - start_ns.tv_sec) * 1000 + 
                                         (float)(end_ns.tv_nsec - start_ns.tv_nsec) / 1000000;
 
-            multi_test_metrics.precision.push_back(accuracies.macro_precision);
-            multi_test_metrics.recall.push_back(accuracies.macro_recall);
-            multi_test_metrics.f1_score.push_back(accuracies.macro_f1_score);
-            multi_test_metrics.g_mean.push_back(accuracies.g_mean);
-            multi_test_metrics.elapsed_time_ms.push_back(elaped_time_ms);
+            k_fold_test_metrics.precision.push_back(accuracies.macro_precision);
+            k_fold_test_metrics.recall.push_back(accuracies.macro_recall);
+            k_fold_test_metrics.f1_score.push_back(accuracies.macro_f1_score);
+            k_fold_test_metrics.g_mean.push_back(accuracies.g_mean);
+            k_fold_test_metrics.elapsed_time_ms.push_back(elaped_time_ms);
         }
+
+        multi_test_metrics.precision.push_back(GetKFoldTestAverage(k_fold_test_metrics.precision));
+        multi_test_metrics.recall.push_back(GetKFoldTestAverage(k_fold_test_metrics.recall));
+        multi_test_metrics.f1_score.push_back(GetKFoldTestAverage(k_fold_test_metrics.f1_score));
+        multi_test_metrics.g_mean.push_back(GetKFoldTestAverage(k_fold_test_metrics.g_mean));
+        multi_test_metrics.elapsed_time_ms.push_back(GetKFoldTestAverage(k_fold_test_metrics.elapsed_time_ms));
     }
 #ifdef DEBUG
     std::cout << "-Testing Result" << std::endl;

@@ -19,9 +19,8 @@ static Accuracies CalcAccForDecisionTree(const std::vector<std::vector<float>> &
         .macro_recall    = 0.f,
         .macro_f1_score  = 0.f,
         .g_mean          = 1.f,
-        .macro_FPR       = 0.f,
-        .FPR             = {},
-        .FNR             = {}
+        .FDR             = {},
+        .FOR             = {}
     };
     
     std::vector<std::vector<uint32_t>> confusion_matrix(n_training_classes + 1, std::vector<uint32_t>(4, 0));
@@ -69,32 +68,30 @@ static Accuracies CalcAccForDecisionTree(const std::vector<std::vector<float>> &
             f1_score = 2 * precision * recall / (precision + recall);
         }
 
-        float FPR = 0.f;
-        if((confusion_matrix[class_idx][FP] + confusion_matrix[class_idx][TN]) > 0){
-            FPR = (float)confusion_matrix[class_idx][FP] / 
-                    (float)(confusion_matrix[class_idx][FP] + confusion_matrix[class_idx][TN]);
+        float FDR = 0.f;
+        if((confusion_matrix[class_idx][FP] + confusion_matrix[class_idx][TP]) > 0){
+            FDR = (float)confusion_matrix[class_idx][FP] / 
+                    (float)(confusion_matrix[class_idx][FP] + confusion_matrix[class_idx][TP]);
         }
 
-        float FNR = 0.f;
-        if((confusion_matrix[class_idx][FN] + confusion_matrix[class_idx][TP]) > 0){
-            FNR = (float)confusion_matrix[class_idx][FN] / 
-                    (float)(confusion_matrix[class_idx][FN] + confusion_matrix[class_idx][TP]);
+        float FOR = 0.f;
+        if((confusion_matrix[class_idx][FN] + confusion_matrix[class_idx][TN]) > 0){
+            FOR = (float)confusion_matrix[class_idx][FN] / 
+                    (float)(confusion_matrix[class_idx][FN] + confusion_matrix[class_idx][TN]);
         }
-
+        
         accuracies.macro_precision += precision;
         accuracies.macro_recall    += recall;
         accuracies.macro_f1_score  += f1_score;
         accuracies.g_mean          *= recall;
-        accuracies.macro_FPR       += FPR;
-        accuracies.FPR.push_back(FPR);
-        accuracies.FNR.push_back(FNR);
+        accuracies.FDR.push_back(FDR);
+        accuracies.FOR.push_back(FOR);
     }
 
     accuracies.macro_precision /= n_testing_classes;
     accuracies.macro_recall    /= n_testing_classes;
     accuracies.macro_f1_score  /= n_testing_classes;
     accuracies.g_mean           = pow(accuracies.g_mean, 1.f / n_testing_classes);
-    accuracies.macro_FPR       /= n_testing_classes;
 
     return accuracies;
 }

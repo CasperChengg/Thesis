@@ -1,7 +1,8 @@
-dataset
+datasets    
 interview
 testing
 **/build
+**/nohup.out
 .*
 !.gitignore
 *.txt

@@ -16,14 +16,14 @@ static std::vector<uint32_t> CalculateClassCounts(const std::vector<std::vector<
     return class_counts;
 }
 
-static std::vector<float> CalculateMinorityScores(const Accuracies &training_set_accuracies, const uint32_t n_classes)
+static std::vector<float> CalculateMajorityScores(const Accuracies &training_set_accuracies, const uint32_t n_classes)
 {
     std::vector<float> majority_scores(n_classes + 1, 0.f);
 
     // float max_diversity = 0.f, min_diversity = std::numeric_limits<float>::max();
     for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
         // std::cout << training_set_accuracies.FPR[class_idx] << " " << training_set_accuracies.FNR[class_idx] << std::endl;                                   
-        majority_scores[class_idx] = (training_set_accuracies.FPR[class_idx]) / (training_set_accuracies.FNR[class_idx] + 1);
+        majority_scores[class_idx] = training_set_accuracies.FDR[class_idx] / (training_set_accuracies.FOR[class_idx] + 1);
         // if(diversity[class_idx] > max_diversity){
         //     max_diversity = diversity[class_idx];
         // }
@@ -67,9 +67,6 @@ static void CalculateSamplingWeights(const std::vector<std::vector<float>> &trai
 
     for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
         uint32_t training_data_label = training_set[training_data_idx][training_data_label_idx];
-        if(majority_scores[training_data_label] == 0.f){
-            continue;
-        }
 
         auto compare = [](const std::pair<uint32_t, float> &a, const std::pair<uint32_t, float> &b){return a.second < b.second;};
         std::priority_queue<std::pair<uint32_t, float>, std::vector<std::pair<uint32_t, float>>, decltype(compare)> k_nearest_neighbors(compare);
@@ -96,7 +93,6 @@ static void CalculateSamplingWeights(const std::vector<std::vector<float>> &trai
     sampling_weights.assign(training_set.size(), 0.f);
     for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
         uint32_t training_data_label = training_set[training_data_idx][training_data_label_idx];
-        
         if(distances_to_minority_rnn[training_data_idx] == 0.f){
             sampling_weights[training_data_idx] = 0.f;
         }
@@ -159,7 +155,7 @@ void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_cl
     
     Accuracies training_set_accuracies = Validation(training_set, training_set, n_classes, model_parameters);
 
-    std::vector<float> majority_scores  = CalculateMinorityScores(training_set_accuracies, n_classes);
+    std::vector<float> majority_scores  = CalculateMajorityScores(training_set_accuracies, n_classes);
     std::vector<float> sampling_weights(training_set.size(), 0.f);
     CalculateSamplingWeights(training_set, majority_scores, k, sampling_weights);
     
@@ -179,20 +175,20 @@ void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_cl
         for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
             std::cout << "\tClass" << class_idx << ": " << class_counts[class_idx];
             std::cout << "(" << (float)class_counts[class_idx] / training_set.size() * 100 << "%, ";
-            std::cout << majority_scores[class_idx] << ")" << std::endl; 
+            std::cout << training_set_accuracies.FDR[class_idx] << ", " << training_set_accuracies.FOR[class_idx] << ", "<< majority_scores[class_idx] << ")" << std::endl; 
         }
         std::cout << std::endl;
     #endif // DEBUG
 
     std::vector<bool> is_removed(training_set.size(), false);
-    uint32_t n_removed = (float)training_set.size() * training_set_accuracies.macro_FPR;
+    uint32_t n_removed = 2 * (float)training_set.size() * (std::accumulate(training_set_accuracies.FDR.begin(), training_set_accuracies.FDR.end(), 0.f) / n_classes);
     if(n_removed > n_removed_candidate){
         n_removed = n_removed_candidate;
     }
 
     #ifdef DEBUG
         std::cout << "[Preprocessing Detail]" << std::endl;
-        std::cout << "-Macro FPR             :" <<  training_set_accuracies.macro_FPR << std::endl;
+        std::cout << "-Macro Maj Scores      :" <<  std::accumulate(majority_scores.begin(), majority_scores.end(), 0.f) / n_classes << std::endl;
         std::cout << "-Num Removed Candidate :" <<  n_removed_candidate  << std::endl;
         std::cout << "-Sampling Size         :" <<  n_removed  << std::endl << std::endl;
     #endif
@@ -208,7 +204,7 @@ void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_cl
     #ifdef DEBUG
         class_counts = CalculateClassCounts(training_set, n_classes);
         training_set_accuracies = Validation(training_set, training_set, n_classes, model_parameters);
-        majority_scores  = CalculateMinorityScores(training_set_accuracies, n_classes);
+        majority_scores  = CalculateMajorityScores(training_set_accuracies, n_classes);
         std::cout << "[Preprocessing Summary]" << std::endl;
         std::cout << "-Size             :" << training_set.size()    << std::endl;
         std::cout << "-Dimension        :" << training_set[0].size() << std::endl;
@@ -216,7 +212,7 @@ void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_cl
         for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
             std::cout << "\tClass" << class_idx << ": " << class_counts[class_idx];
             std::cout << "(" << (float)class_counts[class_idx] / training_set.size() * 100 << "%, ";
-            std::cout << majority_scores[class_idx] << ")" << std::endl; 
+            std::cout << training_set_accuracies.FDR[class_idx] << ", " << training_set_accuracies.FOR[class_idx] << ", "<< majority_scores[class_idx] << ")" << std::endl; 
         }
     #endif // DEBUG
 }

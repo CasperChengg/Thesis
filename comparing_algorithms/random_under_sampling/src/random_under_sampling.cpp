@@ -39,8 +39,8 @@ void RandomUnderSampling(std::vector<std::vector<float>> &training_set, const ui
             uint32_t data_idx = data_idxes_by_class[class_idx][shuffle_data_idx];    
             preprocessed_data.push_back(training_set[data_idx]);
         }
-    }
 
+    }
     training_set.clear();
     training_set = preprocessed_data;
 }
