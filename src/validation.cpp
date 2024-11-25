@@ -52,15 +52,15 @@ static Accuracies CalcAccForDecisionTree(const std::vector<std::vector<float>> &
     for(uint32_t class_idx = 1; class_idx <= n_training_classes; class_idx++) // Class labels start from 1
     {
         float precision = 0.f;
-        if((confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FN]) > 0){
+        if((confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FP]) > 0){
             precision = (float)confusion_matrix[class_idx][TP] / 
-                            (float)(confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FN]);
+                            (float)(confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FP]);
         }
 
         float recall = 0.f;    
-        if((confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FP]) > 0){
+        if((confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FN]) > 0){
             recall = (float)confusion_matrix[class_idx][TP] / 
-                        (float)(confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FP]);
+                        (float)(confusion_matrix[class_idx][TP] + confusion_matrix[class_idx][FN]);
         }
 
         float f1_score = 0.f;
