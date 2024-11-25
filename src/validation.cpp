@@ -28,14 +28,7 @@ static Accuracies CalcAccForDecisionTree(const std::vector<std::vector<float>> &
     for(uint32_t testing_data_idx = 0; testing_data_idx < testing_set.size(); testing_data_idx++){
         uint32_t data_label      = testing_set[testing_data_idx][data_label_idx];               // Ground truth
         uint32_t predicted_label = PredictByDecisionTree(root, testing_set[testing_data_idx]);  // Prediction
-        
-        if(predicted_label == data_label) {
-            confusion_matrix[predicted_label][TP]++;
-        }
-        else{
-            confusion_matrix[predicted_label][FP]++;
-            confusion_matrix[data_label][FN]++;
-        }
+        confusion_matrix[predicted_label][data_label]++;
     }
 
     for(uint32_t class_idx = 1; class_idx <= n_training_classes; class_idx++){ // Class labels start from 1
