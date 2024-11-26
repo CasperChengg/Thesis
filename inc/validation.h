@@ -11,6 +11,7 @@ typedef struct Accuracies{
     float macro_recall;
     float macro_f1_score;
     float g_mean;
+    float macro_FDR;
     std::vector<std::vector<uint32_t>> confusion_matrix; 
 }Accuracies;
 

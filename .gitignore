@@ -1,9 +1,8 @@
 datasets    
 interview
 testing
-**/build
-**/nohup.out
+build
+nohup.out
 .*
 !.gitignore
-*.txt
 !CMakeLists.txt

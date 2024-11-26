@@ -14,6 +14,7 @@ static Accuracies CalcAccForDecisionTree(const std::vector<std::vector<float>> &
         .macro_recall     = 0.f,
         .macro_f1_score   = 0.f,
         .g_mean           = 1.f,
+        .macro_FDR        = 0.f,
         .confusion_matrix = std::vector<std::vector<uint32_t>>(n_training_classes + 1, std::vector<uint32_t>(n_training_classes + 1, 0))
     };
     
@@ -64,16 +65,13 @@ static Accuracies CalcAccForDecisionTree(const std::vector<std::vector<float>> &
             if((TP + FP) > 0){
                 FDR = (float)FP / (TP + FP);
             }
-
-            float FOR = 0.f;
-            if((FN + TN) > 0){
-                FOR = (float)FN / (TN + FN);
-            }
             
             accuracies.macro_precision += precision;
             accuracies.macro_recall    += recall;
             accuracies.macro_f1_score  += f1_score;
             accuracies.g_mean          *= recall;
+            accuracies.macro_FDR       += FDR;
+            // std::cout << class_idx << ", " << precision << ", " << recall << ", " << f1_score << ", " << FDR << std::endl;
         }
     }
 
@@ -81,6 +79,7 @@ static Accuracies CalcAccForDecisionTree(const std::vector<std::vector<float>> &
     accuracies.macro_recall    /= n_testing_classes;
     accuracies.macro_f1_score  /= n_testing_classes;
     accuracies.g_mean           = pow(accuracies.g_mean, 1.f / n_testing_classes);
+    accuracies.macro_FDR       /= n_testing_classes;
 
     return accuracies;
 }
