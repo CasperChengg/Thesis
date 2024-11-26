@@ -1,25 +1,24 @@
 #!/bin/bash
 declare -a file_array=(
     "balance"
-    "ecoli"
     "glass"
     "hayes-roth"
-    "movement_libras"
+    # "movement_libras"
     "new-thyroid"
-    "optdigits"
-    "pageblocks"
-    "penbased"
-    "satimage"
-    "segment"
-    "shuttle"
-    "tae"
-    "texture"
-    "thyroid"
-    "vehicle"
-    "vowel"
-    "wine"
-    "winequality-red"
-    "winequality-white"
+    # "optdigits"
+    # "pageblocks"
+    # "penbased"
+    # "satimage"
+    # "segment"
+    # "shuttle"
+    # "tae"
+    # "texture"
+    # "thyroid"
+    # "vehicle"
+    # "vowel"
+    # "wine"
+    # "winequality-red"
+    # "winequality-white"
 )
 
 KNN=5    
@@ -50,10 +49,10 @@ echo -e "KNN=$KNN\nK_FOLD=$K_FOLD\nTEST_TIME=$TEST_TIME\nMODEL_TYPE=$MODEL_TYPE\
 
 for file in "${file_array[@]}"
 do
-    echo "========== $file ===========" >> "$filename"
-    nohup ./main "$file" >> "$filename" 2> /dev/null &
-    # echo "========== $file ==========="
-    # ./main "$file"
+    # echo "========== $file ===========" >> "$filename"
+    # nohup ./main "$file" >> "$filename" 2> /dev/null &
+    echo "========== $file ==========="
+    ./main "$file"
     wait $!
 done
 echo "Finish: $(date +"%Y-%m-%d %H:%M:%S")" >> "$filename"
