@@ -100,56 +100,37 @@ static void CalculateSamplingWeights(const std::vector<std::vector<float>> &trai
     }
 }
 
-static void RouletteWheelSelection(std::vector<bool> &selection_result, std::vector<float> fitness, const uint32_t n_rounds)
+static void RouletteWheelSelection(std::vector<bool> &selection_result, std::vector<float> &fitness, const uint32_t n_rounds)
 {
     // Sum up the total fitness in order to do the sum-to-one normalization
     float total_fitness = std::accumulate(fitness.begin(), fitness.end(), 0.f);
 
-    // Calculate the upper limit of each pocket in the roulette wheel
-    std::vector<float> cumulative_prob(fitness.size(), 0.f);
-
-    // Sum-to-one Normalization
-    uint32_t last_nonzero_prob_idx = 0;
-    cumulative_prob[0] = fitness[0] / total_fitness; 
-    for(uint32_t fitness_idx = 1; fitness_idx < fitness.size(); fitness_idx++){
-        cumulative_prob[fitness_idx] = cumulative_prob[fitness_idx - 1] + fitness[fitness_idx] / total_fitness;
-        // std::cout << fitness[fitness_idx] << std::endl;
-        if(fitness[fitness_idx] == 0.f){
-            last_nonzero_prob_idx = fitness_idx;
-        }
-    }
-    cumulative_prob[last_nonzero_prob_idx] = 1.0;
-
     // Set up the random generator
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<> distrib(0.0, 1.0);
     
     // Draw without replacement
     for(uint32_t round = 0; round < n_rounds; round++)
     {
-        float rand_0_1 = distrib(gen);
+        std::uniform_real_distribution<> distrib(0.0, total_fitness);
+        float rand_0_total_fitnesss = distrib(gen);
+
         uint32_t selected_individual_idx;
-        
         for(selected_individual_idx = 0; selected_individual_idx < fitness.size(); selected_individual_idx++){
-            // std::cout << cumulative_prob[selected_individual_idx] << std::endl;
-            if(rand_0_1 <= cumulative_prob[selected_individual_idx]){
+            rand_0_total_fitnesss -= fitness[selected_individual_idx];
+            if(rand_0_total_fitnesss <= 0){
                 break;
             }
         }
-        // std::cout << selected_individual_idx << std::endl;
-        if(!selection_result[selected_individual_idx]){
-            selection_result[selected_individual_idx] = true;
-        }
-        else{
-            round--;
-        }
+
+        total_fitness -= fitness[selected_individual_idx];
+        fitness[selected_individual_idx] = 0.f;
+        selection_result[selected_individual_idx] = true;
     }
 }
 
 void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_classes, const uint32_t k, const ModelParameters model_parameters)
 {
-    
     Accuracies training_set_accuracies = Validation(training_set, training_set, n_classes, model_parameters);
 
     std::vector<std::vector<bool>> is_relative_minority(n_classes + 1, std::vector<bool>(n_classes + 1, false));

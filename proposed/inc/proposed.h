@@ -1,7 +1,13 @@
 #ifndef PROPOSED_H
 #define PROPOSED_H
 
-// #define DEBUG
+#undef PRINT_INFO
+// #define PRINT_INFO
+#ifdef PRINT_INFO
+    #define PDEBUG(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#else
+    #define PDEBUG(fmt, ...)
+#endif
 
 #include <cmath>
 #include <random>
@@ -15,3 +21,4 @@
 void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_classes, const uint32_t k, const ModelParameters model_parameters);
 
 #endif
+
