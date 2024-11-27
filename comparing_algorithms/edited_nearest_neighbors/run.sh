@@ -1,7 +1,6 @@
 #!/bin/bash
 declare -a file_array=(
     "balance"
-    "ecoli"
     "glass"
     "hayes-roth"
     "movement_libras"
