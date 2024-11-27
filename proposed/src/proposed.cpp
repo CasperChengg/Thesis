@@ -30,33 +30,23 @@ static float EuclideanDistance(const std::vector<float> &src, const std::vector<
     return sqrt(square_distance);
 }
 
-static void IdentifyRelativeMinority(const Accuracies &training_set_accuracies, const uint32_t n_classes, std::vector<std::vector<bool>> &is_relative_minority)
+static bool isRelativeMinority(const Accuracies &training_set_accuracies, const std::vector<uint32_t>class_counts, 
+                                const uint32_t compared_class_idx, const uint32_t comparator_class_idx)
 {
-    std::vector<uint32_t> class_counts(n_classes + 1, 0);
-    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
-        for(uint32_t row_idx = 1; row_idx <= n_classes; row_idx++){
-            class_counts[class_idx] += training_set_accuracies.confusion_matrix[row_idx][class_idx];
-        }
-    }
+    float false_rate_compared_to_comparator = (float)training_set_accuracies.confusion_matrix[comparator_class_idx][compared_class_idx]
+                                                / class_counts[compared_class_idx];
+    float false_rate_comparator_to_compared = (float)training_set_accuracies.confusion_matrix[compared_class_idx][comparator_class_idx]
+                                                / class_counts[comparator_class_idx];
     
-    for(uint32_t src_class_idx = 1; src_class_idx <= n_classes; src_class_idx++){
-        for(uint32_t tar_class_idx = src_class_idx + 1; tar_class_idx <= n_classes; tar_class_idx++){
-            float false_rate_src_to_tar = (float)training_set_accuracies.confusion_matrix[tar_class_idx][src_class_idx]
-                                                / class_counts[src_class_idx];
-            float false_rate_tar_to_src = (float)training_set_accuracies.confusion_matrix[src_class_idx][tar_class_idx]
-                                                / class_counts[tar_class_idx];
-            
-            if(false_rate_src_to_tar < false_rate_tar_to_src){
-                is_relative_minority[tar_class_idx][src_class_idx] = true;
-            }
-            else if(false_rate_src_to_tar > false_rate_tar_to_src){
-                is_relative_minority[src_class_idx][tar_class_idx] = true;
-            }
-        }   
+    if(false_rate_compared_to_comparator > false_rate_comparator_to_compared){
+        return true;
     }
+    else{
+        return false;
+    } 
 }
 
-static void CalculateSamplingWeights(const std::vector<std::vector<float>> &training_set, const std::vector<std::vector<bool>> &is_relative_minority, const uint32_t k, std::vector<float> &sampling_weights)
+static void CalculateSamplingWeights(const std::vector<std::vector<float>> &training_set, const Accuracies &training_set_accuracies, const std::vector<uint> &class_counts, const uint32_t k, std::vector<float> &sampling_weights)
 {
     uint32_t training_data_label_idx = training_set[0].size() - 1;
     std::vector<uint32_t> minority_rnn_counts(training_set.size(), 0);
@@ -79,7 +69,7 @@ static void CalculateSamplingWeights(const std::vector<std::vector<float>> &trai
             std::pair<uint32_t, float> nearest_neighbor = k_nearest_neighbors.top();
             uint32_t nearest_neighbor_idx   = nearest_neighbor.first;
             uint32_t nearest_neighbor_label = training_set[nearest_neighbor_idx][training_data_label_idx];
-            if(is_relative_minority[training_data_label][nearest_neighbor_label]){
+            if(isRelativeMinority(training_set_accuracies, class_counts, training_data_label, nearest_neighbor_label)){
                 minority_rnn_counts[nearest_neighbor_idx]++;
                 distances_to_minority_rnn[nearest_neighbor_idx] += nearest_neighbor.second;
             }
@@ -131,48 +121,31 @@ static void RouletteWheelSelection(std::vector<bool> &selection_result, std::vec
 
 void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_classes, const uint32_t k, const ModelParameters model_parameters)
 {
+    std::vector<uint32_t> class_counts = CalculateClassCounts(training_set, n_classes);
+    PDEBUG("[Dataset Overview]\n");
+    PDEBUG("-Size             :%ld\n", training_set.size());
+    PDEBUG("-Dimension        :%ld\n", training_set[0].size());
+    PDEBUG("-Data Distribution:\n");
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
+        PDEBUG("\tClass %u: %u (%f %%)\n", class_idx, class_counts[class_idx], 
+                                            (float)class_counts[class_idx] / training_set.size() * 100);
+    }
+
     Accuracies training_set_accuracies = Validation(training_set, training_set, n_classes, model_parameters);
 
-    std::vector<std::vector<bool>> is_relative_minority(n_classes + 1, std::vector<bool>(n_classes + 1, false));
-    IdentifyRelativeMinority(training_set_accuracies, n_classes, is_relative_minority);
-
     std::vector<float> sampling_weights(training_set.size(), 0.f);
-    CalculateSamplingWeights(training_set, is_relative_minority, k, sampling_weights);
-    
-    uint32_t n_removed_candidate = 0;
-    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
-        if(sampling_weights[training_data_idx] > 0.f){
-            n_removed_candidate++;
-        }
-    }
+    CalculateSamplingWeights(training_set, training_set_accuracies, class_counts, k, sampling_weights);
 
-    #ifdef DEBUG
-        std::vector<uint32_t> class_counts = CalculateClassCounts(training_set, n_classes);
-        std::cout << "[Dataset Overview]"  << std::endl;
-        std::cout << "-Size             :" << training_set.size()    << std::endl;
-        std::cout << "-Dimension        :" << training_set[0].size() << std::endl;
-        std::cout << "-Data Distribution:" << std::endl;
-        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
-            std::cout << "\tClass" << class_idx << ": " << class_counts[class_idx];
-            std::cout << "(" << (float)class_counts[class_idx] / training_set.size() * 100 << "%)" << std::endl;
-            // std::cout << training_set_accuracies.FDR[class_idx] << ", " << training_set_accuracies.FOR[class_idx] << ", "<< majority_scores[class_idx] << ")" << std::endl; 
-        }
-        std::cout << std::endl;
-    #endif // DEBUG
+    uint32_t n_removed_candidate = std::count_if(sampling_weights.begin(), sampling_weights.end(), 
+                                                    [](float sampling_weight){return sampling_weight > 0.f;}); 
+    uint32_t n_removed = (training_set.size() * training_set_accuracies.g_mean > n_removed_candidate)? 
+                            n_removed_candidate : training_set.size() * training_set_accuracies.g_mean;
+
+    PDEBUG("[Preprocessing Detail]\n");
+    PDEBUG("-Num Removed Candidate : %u\n", n_removed_candidate);
+    PDEBUG("-Sampling Size         : %u\n", n_removed);
 
     std::vector<bool> is_removed(training_set.size(), false);
-    uint32_t n_removed = (float)training_set.size() * training_set_accuracies.g_mean;
-    if(n_removed > n_removed_candidate){
-        n_removed = n_removed_candidate;
-    }
-    
-    #ifdef DEBUG
-        std::cout << "[Preprocessing Detail]" << std::endl;
-        // std::cout << "-Macro Maj Scores      :" <<  std::accumulate(majority_scores.begin(), majority_scores.end(), 0.f) / n_classes << std::endl;
-        std::cout << "-Num Removed Candidate :" <<  n_removed_candidate  << std::endl;
-        std::cout << "-Sampling Size         :" <<  n_removed  << std::endl << std::endl;
-    #endif
-
     RouletteWheelSelection(is_removed, sampling_weights, n_removed);
 
     for(int training_data_idx = (training_set.size() - 1); training_data_idx >= 0; training_data_idx--){
@@ -181,19 +154,14 @@ void Proposed(std::vector<std::vector<float>> &training_set, const uint32_t n_cl
         }
     }
 
-    #ifdef DEBUG
-        class_counts = CalculateClassCounts(training_set, n_classes);
-        training_set_accuracies = Validation(training_set, training_set, n_classes, model_parameters);
-        // majority_scores  = CalculateMajorityScores(training_set_accuracies, n_classes);
-        std::cout << "[Preprocessing Summary]" << std::endl;
-        std::cout << "-Size             :" << training_set.size()    << std::endl;
-        std::cout << "-Dimension        :" << training_set[0].size() << std::endl;
-        std::cout << "-Data Distribution:" << std::endl;
-        for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
-            std::cout << "\tClass" << class_idx << ": " << class_counts[class_idx];
-            std::cout << "(" << (float)class_counts[class_idx] / training_set.size() * 100 << "%)" << std::endl;
-            // std::cout << training_set_accuracies.FDR[class_idx] << ", " << training_set_accuracies.FOR[class_idx] << ", "<< majority_scores[class_idx] << ")" << std::endl; 
-        }
-    #endif // DEBUG
+    FDEBUG(class_counts = CalculateClassCounts(training_set, n_classes));
+    PDEBUG("[Preprocessing Summary]\n");
+    PDEBUG("-Size             :%ld\n", training_set.size());
+    PDEBUG("-Dimension        :%ld\n", training_set[0].size());
+    PDEBUG("-Data Distribution:\n");
+    for(uint32_t class_idx = 1; class_idx <= n_classes; class_idx++){
+        PDEBUG("\tClass %u: %u (%f %%)\n", class_idx, class_counts[class_idx], 
+                                            (float)class_counts[class_idx] / training_set.size() * 100);
+    }
 }
 

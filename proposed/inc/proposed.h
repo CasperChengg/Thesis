@@ -1,12 +1,14 @@
 #ifndef PROPOSED_H
 #define PROPOSED_H
 
-#undef PRINT_INFO
-// #define PRINT_INFO
-#ifdef PRINT_INFO
+// #define DEBUG_MODE
+
+#ifdef DEBUG_MODE
     #define PDEBUG(fmt, ...) printf(fmt, ##__VA_ARGS__)
+    #define FDEBUG(fmt) fmt
 #else
     #define PDEBUG(fmt, ...)
+    #define FDEBUG(fmt)
 #endif
 
 #include <cmath>

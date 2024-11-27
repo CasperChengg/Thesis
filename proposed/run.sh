@@ -1,10 +1,10 @@
 #!/bin/bash
 declare -a file_array=(
     "balance"
-    "glass"
-    "hayes-roth"
+    # "glass"
+    # "hayes-roth"
     # "movement_libras"
-    "new-thyroid"
+    # "new-thyroid"
     # "optdigits"
     # "pageblocks"
     # "penbased"
