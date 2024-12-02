@@ -26,13 +26,13 @@ declare -a file_array=(
 )
 
 K_FOLD=5
-TEST_TIME=22
+TEST_TIME=7
                                                 
 MODEL_TYPE="decision_tree"
 MIN_SAMPLES_SPLIT=10
 MAX_PURITY=0.95
 
-for KNN in {1..10}
+for KNN in 1 3 5 7 9
 do
     CMAKE_OPTIONS="
         -DKNN=${KNN}
