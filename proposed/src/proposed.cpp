@@ -28,18 +28,19 @@ static float EuclideanDistance(const std::vector<float> &src, const std::vector<
     return sqrt(square_distance);
 }
 
-static bool isRelativeMinority(const Accuracies &training_set_accuracies, const std::vector<uint32_t>class_counts, 
-                                const uint32_t compared_class_idx, const uint32_t comparator_class_idx)
+static float RelativeMinorityRate(const Accuracies &training_set_accuracies, const std::vector<uint32_t>class_counts, 
+                                const uint32_t positive_class_idx, const uint32_t negative_class_idx)
 {
-    float false_rate_compared_to_comparator = (float)training_set_accuracies.confusion_matrix[comparator_class_idx][compared_class_idx]
-                                                / class_counts[compared_class_idx];
-    float false_rate_comparator_to_compared = (float)training_set_accuracies.confusion_matrix[compared_class_idx][comparator_class_idx]
-                                                / class_counts[comparator_class_idx];
-    if(false_rate_compared_to_comparator > false_rate_comparator_to_compared){
-        return true;
+    
+    float false_rate_positive_to_negative = (float)training_set_accuracies.confusion_matrix[negative_class_idx][positive_class_idx]
+                                                / class_counts[positive_class_idx];
+    float false_rate_negative_to_positive = (float)training_set_accuracies.confusion_matrix[positive_class_idx][negative_class_idx]
+                                                / class_counts[negative_class_idx];
+    if(false_rate_positive_to_negative > false_rate_negative_to_positive){
+        return (false_rate_positive_to_negative - false_rate_negative_to_positive) / false_rate_positive_to_negative;
     }
     else{
-        return false;
+        return 0.f;
     } 
 }
 
@@ -70,9 +71,10 @@ static void CalculateSamplingWeights(const std::vector<std::vector<float>> &trai
             std::pair<uint32_t, float> nearest_neighbor = k_nearest_neighbors.top();
             uint32_t nearest_neighbor_idx   = nearest_neighbor.first;
             uint32_t nearest_neighbor_label = training_set[nearest_neighbor_idx][training_data_label_idx];
-            if(isRelativeMinority(training_set_accuracies, class_counts, training_data_label, nearest_neighbor_label)){
+            float relative_minority_rate = RelativeMinorityRate(training_set_accuracies, class_counts, training_data_label, nearest_neighbor_label);
+            if(relative_minority_rate > 0.f){
                 minority_rnn_counts[nearest_neighbor_idx]++;
-                distances_to_minority_rnn[nearest_neighbor_idx] += nearest_neighbor.second;
+                distances_to_minority_rnn[nearest_neighbor_idx] += nearest_neighbor.second * relative_minority_rate;
             }
             k_nearest_neighbors.pop();
         }

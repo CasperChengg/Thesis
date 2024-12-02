@@ -1,6 +1,9 @@
 #!/bin/bash
 declare -a file_array=(
     "balance"
+    "cleveland"
+    "contraceptive"
+    "dermatology"
     "glass"
     "hayes-roth"
     "movement_libras"
@@ -19,11 +22,11 @@ declare -a file_array=(
     "wine"
     "winequality-red"
     "winequality-white"
+    "yeast"
 )
 
-      
 K_FOLD=5
-TEST_TIME=12
+TEST_TIME=22
                                                 
 MODEL_TYPE="decision_tree"
 MIN_SAMPLES_SPLIT=10

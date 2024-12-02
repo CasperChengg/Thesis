@@ -1,9 +1,11 @@
 #!/bin/bash
 declare -a file_array=(
     "balance"
-    "ecoli"
+    "cleveland"
+    "contraceptive"
+    "dermatology"
     "glass"
-    # "hayes-roth"
+    "hayes-roth"
     # "movement_libras"
     # "new-thyroid"
     # "optdigits"
@@ -20,10 +22,11 @@ declare -a file_array=(
     # "wine"
     # "winequality-red"
     # "winequality-white"
+    # "yeast"
 )
    
 K_FOLD=5
-TEST_TIME=12
+TEST_TIME=22
                                                 
 MODEL_TYPE="decision_tree"
 MIN_SAMPLES_SPLIT=10
@@ -48,8 +51,10 @@ echo -e "K_FOLD=$K_FOLD\nTEST_TIME=$TEST_TIME\nMODEL_TYPE=$MODEL_TYPE\nMIN_SAMPL
 
 for file in "${file_array[@]}"
 do
-    echo "========== $file ===========" >> "$filename"
-    nohup ./main "$file" >> "$filename" 2> /dev/null &
+    # echo "========== $file ===========" >> "$filename"
+    # nohup ./main "$file" >> "$filename" 2> /dev/null &
+    echo "========== $file ==========="
+    ./main "$file"
     wait $!
 done
 echo "Finish: $(date +"%Y-%m-%d %H:%M:%S")" >> "$filename"

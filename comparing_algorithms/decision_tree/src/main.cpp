@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
             std::string training_path = file_path + std::to_string(k) + "tra.dat";
             std::string testing_path = file_path + std::to_string(k) + "tst.dat";
             Dataset dataset = ReadTrainingAndTestingSet(training_path, testing_path);
-
             timespec start_ns = {0}, end_ns = {0};
             clock_gettime(CLOCK_MONOTONIC, &start_ns);
             Accuracies accuracies = Validation(dataset.training_set, dataset.testing_set, dataset.n_classes, model_parameters);

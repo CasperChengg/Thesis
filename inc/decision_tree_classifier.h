@@ -6,6 +6,7 @@
 #include <cstring> // memset
 #include <iostream>
 #include <algorithm>
+#include <numeric> // std::accumulate
 
 typedef struct SplitPoint{
     uint32_t feature;
