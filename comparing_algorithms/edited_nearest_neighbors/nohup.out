@@ -145,3 +145,59 @@ Scanning dependencies of target main
 make[2]: *** [CMakeFiles/main.dir/build.make:63: CMakeFiles/main.dir/home/m11202122/src/decision_tree_classifier.cpp.o] Error 1
 make[1]: *** [CMakeFiles/Makefile2:76: CMakeFiles/main.dir/all] Error 2
 make: *** [Makefile:84: all] Error 2
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/m11202122/comparing_algorithms/edited_nearest_neighbors/build
+Scanning dependencies of target main
+[ 16%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/decision_tree_classifier.cpp.o
+[ 33%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/file_operations.cpp.o
+[ 50%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/validation.cpp.o
+[ 66%] Building CXX object CMakeFiles/main.dir/src/edited_nearest_neighbors.cpp.o
+[ 83%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
+[100%] Linking CXX executable main
+[100%] Built target main
+./run.sh: line 59: 2924590 Segmentation fault      (core dumped) nohup ./main "$file" >> "$filename" 2> /dev/null
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/m11202122/comparing_algorithms/edited_nearest_neighbors/build
+Scanning dependencies of target main
+[ 16%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/decision_tree_classifier.cpp.o
+[ 33%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/file_operations.cpp.o
+[ 50%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/validation.cpp.o
+[ 66%] Building CXX object CMakeFiles/main.dir/src/edited_nearest_neighbors.cpp.o
+[ 83%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
+[100%] Linking CXX executable main
+[100%] Built target main
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/m11202122/comparing_algorithms/edited_nearest_neighbors/build
+Scanning dependencies of target main
+[ 16%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/decision_tree_classifier.cpp.o
+[ 33%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/file_operations.cpp.o
+[ 50%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/validation.cpp.o
+[ 66%] Building CXX object CMakeFiles/main.dir/src/edited_nearest_neighbors.cpp.o
+[ 83%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
+[100%] Linking CXX executable main
+[100%] Built target main
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/m11202122/comparing_algorithms/edited_nearest_neighbors/build
+Scanning dependencies of target main
+[ 16%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/decision_tree_classifier.cpp.o
+[ 33%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/file_operations.cpp.o
+[ 50%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/validation.cpp.o
+[ 66%] Building CXX object CMakeFiles/main.dir/src/edited_nearest_neighbors.cpp.o
+[ 83%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
+[100%] Linking CXX executable main
+[100%] Built target main
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/m11202122/comparing_algorithms/edited_nearest_neighbors/build
+Scanning dependencies of target main
+[ 16%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/decision_tree_classifier.cpp.o
+[ 33%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/file_operations.cpp.o
+[ 50%] Building CXX object CMakeFiles/main.dir/home/m11202122/src/validation.cpp.o
+[ 66%] Building CXX object CMakeFiles/main.dir/src/edited_nearest_neighbors.cpp.o
+[ 83%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
+[100%] Linking CXX executable main
+[100%] Built target main

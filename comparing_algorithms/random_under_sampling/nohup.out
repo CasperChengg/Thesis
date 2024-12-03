@@ -36,3 +36,7 @@ Scanning dependencies of target main
 [ 33%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
 [ 50%] Linking CXX executable main
 [100%] Built target main
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/m11202122/comparing_algorithms/random_under_sampling/build
+[100%] Built target main

@@ -16,9 +16,9 @@ void RandomUnderSampling(std::vector<std::vector<float>> &training_set, const ui
 {
     const uint32_t label_idx = training_set[0].size() - 1;
     std::vector<uint32_t> data_idxes_by_class[n_classes + 1];
-    for(uint32_t training_data_idx = 0; training_data_idx < training_set.size(); training_data_idx++){
-        uint32_t training_data_label = training_set[training_data_idx][label_idx];
-        data_idxes_by_class[training_data_label].push_back(training_data_idx);
+    for(uint32_t data_idx = 0; data_idx < training_set.size(); data_idx++){
+        uint32_t label = training_set[data_idx][label_idx];
+        data_idxes_by_class[label].push_back(data_idx);
     }
 
     std::vector<uint32_t> class_counts(n_classes + 1, 0);
@@ -28,8 +28,7 @@ void RandomUnderSampling(std::vector<std::vector<float>> &training_set, const ui
 
     uint32_t sampling_size  = CalculateSamplingSize(class_counts);
 
-    std::vector<std::vector<float>> preprocessed_data;
-    preprocessed_data.reserve(n_classes * sampling_size); 
+    std::vector<bool> is_reserved(training_set.size(), false);
     for(uint32_t  class_idx = 1; class_idx <= n_classes; class_idx++){
         uint32_t seed = std::chrono::system_clock::now().time_since_epoch().count();
         shuffle(data_idxes_by_class[class_idx].begin(), data_idxes_by_class[class_idx].end(), 
@@ -37,10 +36,14 @@ void RandomUnderSampling(std::vector<std::vector<float>> &training_set, const ui
 
         for(uint32_t shuffle_data_idx = 0; shuffle_data_idx < sampling_size; shuffle_data_idx++){
             uint32_t data_idx = data_idxes_by_class[class_idx][shuffle_data_idx];    
-            preprocessed_data.push_back(training_set[data_idx]);
+            is_reserved[data_idx] = true;
         }
 
     }
-    training_set.clear();
-    training_set = preprocessed_data;
+
+    for(int data_idx = training_set.size() - 1; data_idx >= 0; data_idx--){
+        if(!is_reserved[data_idx]){
+            training_set.erase(training_set.begin() + data_idx);
+        }
+    }
 }

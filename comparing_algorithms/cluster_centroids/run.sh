@@ -1,31 +1,32 @@
 #!/bin/bash
 declare -a file_array=(
     "balance"
-    # "cleveland"
-    # "contraceptive"
-    # "dermatology"
+    "cleveland"
+    "contraceptive"
+    "dermatology"
     "glass"
     "hayes-roth"
-    # "movement_libras"
+    "movement_libras"
     "new-thyroid"
-    # "optdigits"
+    "optdigits"
     "pageblocks"
-    # "penbased"
-    # "satimage"
-    # "segment"
-    # "shuttle"
+    "penbased"
+    "satimage"
+    "segment"
+    "shuttle"
     "tae"
-    # "texture"
-    # "thyroid"
-    # "vehicle"
-    # "vowel"
+    "texture"
+    "thyroid"
+    "vehicle"
+    "vowel"
     "wine"
-    # "winequality-red"
-    # "winequality-white"
+    "winequality-red"
+    "winequality-white"
+    "yeast"
 )
 
 K_FOLD=5
-TEST_TIME=3
+TEST_TIME=22
                                                 
 MODEL_TYPE="decision_tree"
 MIN_SAMPLES_SPLIT=10
@@ -52,8 +53,6 @@ for file in "${file_array[@]}"
 do
     echo "========== $file ===========" >> "$filename"
     nohup ./main "$file" >> "$filename" 2> /dev/null &
-    # echo "========== $file ==========="
-    # ./main "$file"
     wait $!
 done
 echo "Finish: $(date +"%Y-%m-%d %H:%M:%S")" >> "$filename"

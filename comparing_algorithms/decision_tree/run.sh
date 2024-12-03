@@ -6,23 +6,23 @@ declare -a file_array=(
     "dermatology"
     "glass"
     "hayes-roth"
-    # "movement_libras"
-    # "new-thyroid"
-    # "optdigits"
-    # "pageblocks"
-    # "penbased"
-    # "satimage"
-    # "segment"
-    # "shuttle"
-    # "tae"
-    # "texture"
-    # "thyroid"
-    # "vehicle"
-    # "vowel"
-    # "wine"
-    # "winequality-red"
-    # "winequality-white"
-    # "yeast"
+    "movement_libras"
+    "new-thyroid"
+    "optdigits"
+    "pageblocks"
+    "penbased"
+    "satimage"
+    "segment"
+    "shuttle"
+    "tae"
+    "texture"
+    "thyroid"
+    "vehicle"
+    "vowel"
+    "wine"
+    "winequality-red"
+    "winequality-white"
+    "yeast"
 )
    
 K_FOLD=5
@@ -51,10 +51,8 @@ echo -e "K_FOLD=$K_FOLD\nTEST_TIME=$TEST_TIME\nMODEL_TYPE=$MODEL_TYPE\nMIN_SAMPL
 
 for file in "${file_array[@]}"
 do
-    # echo "========== $file ===========" >> "$filename"
-    # nohup ./main "$file" >> "$filename" 2> /dev/null &
-    echo "========== $file ==========="
-    ./main "$file"
+    echo "========== $file ===========" >> "$filename"
+    nohup ./main "$file" >> "$filename" 2> /dev/null &
     wait $!
 done
 echo "Finish: $(date +"%Y-%m-%d %H:%M:%S")" >> "$filename"

@@ -4,6 +4,10 @@
 #define VALUE 1
 #define LABEL 2
 
+static float CustomRound(float x){
+    return std::round(x * 1e6) / 1e6;
+}
+
 static float CalculateGini(const uint32_t partition_size_y, std::vector<uint32_t> &class_counts_y, 
                             const uint32_t partition_size_n, const std::vector<uint32_t> &class_counts_n)
 {
@@ -59,8 +63,8 @@ static SplitPoint EvaluateSplitPoint(const std::vector<std::vector<std::vector<f
         for(split_right_idx = split_left_idx + 1; split_right_idx < sorted_features[feature_idx].size(); split_right_idx++){
             uint32_t data_idx = sorted_features[feature_idx][split_right_idx][IDX];
             uint32_t label    = sorted_features[feature_idx][split_right_idx][LABEL];
-            bool is_diff = sorted_features[feature_idx][split_left_idx][VALUE] != 
-                                sorted_features[feature_idx][split_right_idx][VALUE];
+            bool is_diff = CustomRound(sorted_features[feature_idx][split_left_idx][VALUE]) != 
+                                CustomRound(sorted_features[feature_idx][split_right_idx][VALUE]);
 
             if(is_existing_data[data_idx]){
                 if(is_diff){
@@ -111,8 +115,7 @@ static void FindBestSplitPoint(TreeNode *node, const std::vector<std::vector<std
     if(partition_size <= min_samples_split || (float)majority_count / partition_size >= max_purity){
         node->label = majority_label;
         return;
-    }
-
+    }   
     node->split_point = {0, 0.f, 1.1};
     
     const uint32_t n_features = (sorted_features.size());
@@ -142,7 +145,7 @@ static void FindBestSplitPoint(TreeNode *node, const std::vector<std::vector<std
             }
         }
     }
-
+    
     if(split_partition_y){
         try{
             node->left_child = new TreeNode;
